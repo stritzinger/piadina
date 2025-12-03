@@ -1,0 +1,53 @@
+# Autotools generated files
+/aclocal.m4
+/autom4te.cache/
+/compile
+/config.guess
+/config.log
+/config.status
+/config.sub
+/configure
+/depcomp
+/install-sh
+/libtool
+/ltmain.sh
+/missing
+/stamp-h1
+/test-driver
+
+# Generated headers
+/piadina_config.h
+
+# Makefile outputs
+Makefile.in
+*/Makefile.in
+Makefile
+*/Makefile
+
+# Build artifacts
+/piadina/*.o
+/piadina/.deps/
+/piadina/.libs/
+/piadina/piadina
+/azdora/*.o
+/azdora/.deps/
+/azdora/.libs/
+/azdora/azdora
+
+# General build directories
+/build-aux/
+
+# Tests outputs
+/tests/**/.deps/
+/tests/**/.libs/
+/tests/unit/test_smoke
+/tests/**/*.log
+/tests/**/*.trs
+/tests/**/*.o
+/tests/**/.dirstamp
+
+# Dist tarballs
+/*.tar.gz
+
+# Editor / backup files
+*~

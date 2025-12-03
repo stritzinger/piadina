@@ -15,80 +15,80 @@ Mark items as you complete them.
 
 ### Repository layout and build basics
 
-- [ ] **Repo setup**
-  - [ ] Create `piadina/` (launcher sources).
-  - [ ] Create `azdora/` (packer sources).
-  - [ ] Create `common/` (shared C modules).
-  - [ ] Create `tests/` with `unit/` and `integration/` subdirs.
-  - [ ] Create `m4/` (Autoconf macros).
+- [x] **Repo setup**
+  - [x] Create `piadina/` (launcher sources).
+  - [x] Create `azdora/` (packer sources).
+  - [x] Create `common/` (shared C modules).
+  - [x] Create `tests/` with `unit/` and `integration/` subdirs.
+  - [x] Create `m4/` (Autoconf macros).
 
-- [ ] **Autotools bootstrap**
-  - [ ] `configure.ac`:
-    - [ ] Init project (name, version, bug-report).
-    - [ ] Check for ANSI C compiler (`AC_PROG_CC`).
-    - [ ] Default `CFLAGS` / `LDFLAGS`.
-    - [ ] `AM_INIT_AUTOMAKE`.
-    - [ ] `AC_CONFIG_HEADERS([piadina_config.h])`.
-    - [ ] `AC_CONFIG_FILES` (Makefiles for root, dirs, tests).
-    - [ ] `AC_OUTPUT`.
+- [x] **Autotools bootstrap**
+  - [x] `configure.ac`:
+    - [x] Init project (name, version, bug-report).
+    - [x] Check for ANSI C compiler (`AC_PROG_CC`).
+    - [x] Default `CFLAGS` / `LDFLAGS`.
+    - [x] `AM_INIT_AUTOMAKE`.
+    - [x] `AC_CONFIG_HEADERS([piadina_config.h])`.
+    - [x] `AC_CONFIG_FILES` (Makefiles for root, dirs, tests).
+    - [x] `AC_OUTPUT`.
 
-  - [ ] `Makefile.am` (root):
-    - [ ] `SUBDIRS = common piadina azdora tests`.
-    - [ ] Wire `check` to recurse.
+  - [x] `Makefile.am` (root):
+    - [x] `SUBDIRS = common piadina azdora tests`.
+    - [x] Wire `check` to recurse.
 
-  - [ ] `piadina/Makefile.am`:
-    - [ ] `bin_PROGRAMS = piadina`.
-    - [ ] Minimal source list (`main.c`).
+  - [x] `piadina/Makefile.am`:
+    - [x] `bin_PROGRAMS = piadina`.
+    - [x] Minimal source list (`main.c`).
 
-  - [ ] `azdora/Makefile.am`:
-    - [ ] `bin_PROGRAMS = azdora`.
-    - [ ] Minimal source list (`main.c`).
+  - [x] `azdora/Makefile.am`:
+    - [x] `bin_PROGRAMS = azdora`.
+    - [x] Minimal source list (`main.c`).
 
-  - [ ] `common/Makefile.am`:
-    - [ ] `noinst_LIBRARIES` or `libcommon_a`.
+  - [x] `common/Makefile.am`:
+    - [x] `noinst_LIBRARIES` or `libcommon_a`.
 
-  - [ ] `tests/Makefile.am`:
-    - [ ] `SUBDIRS = unity unit integration`.
-    - [ ] Wire unit tests into `TESTS`.
+  - [x] `tests/Makefile.am`:
+    - [x] `SUBDIRS = unity unit integration`.
+    - [x] Wire unit tests into `TESTS`.
 
-- [ ] **Helper scripts**
-  - [ ] Add `autogen.sh` (`autoreconf -i`).
+- [x] **Helper scripts**
+  - [x] Add `autogen.sh` (`autoreconf -i`).
 
 ### Skeleton executables and Unity test framework
 
-- [ ] **Minimal `piadina/main.c`**
-  - [ ] Implement `main()` that:
-    - [ ] Prints Piadina version information (hard-coded string or macro).
-    - [ ] Returns exit status `0`.
+- [x] **Minimal `piadina/main.c`**
+  - [x] Implement `main()` that:
+    - [x] Prints Piadina version information (hard-coded string or macro).
+    - [x] Returns exit status `0`.
 
-- [ ] **Minimal `azdora/main.c`**
-  - [ ] Implement `main()` that:
-    - [ ] Prints Azdora version information (hard-coded string or macro).
-    - [ ] Returns exit status `0`.
+- [x] **Minimal `azdora/main.c`**
+  - [x] Implement `main()` that:
+    - [x] Prints Azdora version information (hard-coded string or macro).
+    - [x] Returns exit status `0`.
 
-- [ ] **Vendor Unity test framework**
-  - [ ] Add `tests/unity/` directory.
-  - [ ] Vendor Unity source files:
-    - [ ] `unity.c`.
-    - [ ] `unity.h`.
-  - [ ] Add a simple Unity-based test runner in `tests/unit/` (e.g. `test_smoke.c`):
-    - [ ] Includes `unity.h`.
-    - [ ] Has at least one basic test (e.g. `TEST_ASSERT_EQUAL_INT(1, 1);`).
-    - [ ] Integrates with Automake test harness (listed in `TESTS`).
+- [x] **Vendor Unity test framework**
+  - [x] Add `tests/unity/` directory.
+  - [x] Vendor Unity source files:
+    - [x] `unity.c`.
+    - [x] `unity.h`.
+  - [x] Add a simple Unity-based test runner in `tests/unit/` (e.g. `test_smoke.c`):
+    - [x] Includes `unity.h`.
+    - [x] Has at least one basic test (e.g. `TEST_ASSERT_EQUAL_INT(1, 1);`).
+    - [x] Integrates with Automake test harness (listed in `TESTS`).
 
 ### Build and test verification
 
-- [ ] **Build flow**
-  - [ ] Run `./autogen.sh` (or `autoreconf -i`) successfully.
-  - [ ] Run `./configure` successfully.
-  - [ ] Run `make` successfully:
-    - [ ] `piadina/piadina` binary is built.
-    - [ ] `azdora/azdora` binary is built.
+- [x] **Build flow**
+  - [x] Run `./autogen.sh` (or `autoreconf -i`) successfully.
+  - [x] Run `./configure` successfully.
+  - [x] Run `make` successfully:
+    - [x] `piadina/piadina` binary is built.
+    - [x] `azdora/azdora` binary is built.
 
-- [ ] **Test flow**
-  - [ ] Run `make check` successfully:
-    - [ ] Unity tests in `tests/unit/` run and pass.
-    - [ ] At least one test asserts that `piadina` and `azdora` can be executed and exit with status `0` (can be done via small C driver or shell script).
+- [x] **Test flow**
+  - [x] Run `make check` successfully:
+    - [x] Unity tests in `tests/unit/` run and pass.
+    - [x] At least one test asserts that `piadina` and `azdora` can be executed and exit with status `0` (can be done via small C driver or shell script).
 
 ---
 
