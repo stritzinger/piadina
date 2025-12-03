@@ -556,10 +556,10 @@ Generation order:
   - Template placeholders in metadata use the `{VAR}` syntax (e.g. `{HOME}`, `{PAYLOAD_ROOT}`) and are **not** expanded when writing `.piadina_env`. Instead, each `{VAR}` placeholder SHOULD be rendered as the bash-compatible form `${VAR}` in the exported value so that expansion happens at shell runtime when the file is sourced.
 - Piadina MUST order assignments in `.piadina_env` so that any variable used in another value is defined **before** its first use:
   - Metadata- and launcher-derived variables such as `PAYLOAD_HASH`, `CACHE_ROOT`, and `PAYLOAD_ROOT` MUST be written before variables that reference `${PAYLOAD_HASH}`, `${CACHE_ROOT}`, or `${PAYLOAD_ROOT}`.
-  - Prefixed map variables (e.g. `ENV_FOO`, `EXTRA_BAR`) MUST be written before any unprefixed `ENV` variables, and all unprefixed `ENV` variables MUST appear at the very end of the file so that they can safely override earlier definitions when sourced.
-- The exact set of exported keys is:
+  - Prefixed map variables (e.g. `ENV_FOO`, `CUSTOM_SETTINGS_BAR`) MUST be written before any unprefixed `ENV` variables, and all unprefixed `ENV` variables MUST appear at the very end of the file so that they can safely override earlier definitions when sourced.
+  - The exact set of exported keys is:
   - One uppercase `KEY=VALUE` assignment for each top-level metadata field defined in §3.2.1 (e.g. `VERSION`, `APP_NAME`, `APP_VER`, `ARCHIVE_HASH`, `ARCHIVE_FORMAT`, `PAYLOAD_HASH`, `CACHE_ROOT`, `PAYLOAD_ROOT`, `CLEANUP_POLICY`, `VALIDATE`, `LOG_LEVEL`, `ENTRY_POINT`), whether explicitly provided in metadata or filled in by defaults.
-  - The array and map expansions described above (e.g. `ENTRY_ARGS_COUNT`/`ENTRY_ARGS_N`, prefixed `ENV_*`, prefixed `EXTRA_*` and similar for any future maps following the same pattern).
+  - The array and map expansions described above (e.g. `ENTRY_ARGS_COUNT`/`ENTRY_ARGS_N`, prefixed `ENV_*`, and similar for any user-defined maps following the same pattern).
   - For the special `"ENV"` map only, the additional unprefixed variables corresponding to each key, written last as described above, so that they override earlier definitions when the file is sourced.
   - No other keys derived from the ambient OS environment or internal launcher state MAY be exported into `.piadina_env`.
   - The file format and escaping rules above MUST be followed so that:
@@ -567,7 +567,7 @@ Generation order:
 
 Example:
 
-Below is a **realistic `.piadina_env` example** for an Erlang/OTP release with defaulted top-level metadata fields, an `ENV` map, a user-defined map `EXTRA`, and an `ENTRY_ARGS` array configured in metadata. Assume:
+Below is a **realistic `.piadina_env` example** for an Erlang/OTP release with defaulted top-level metadata fields, an `ENV` map, and a user-defined map named `CUSTOM_SETTINGS`, plus an `ENTRY_ARGS` array configured in metadata. Assume:
 
 - `"VERSION" = 1`
 - `"APP_NAME" = "my_app"`, `"APP_VER" = "1.2.3"`.
@@ -583,7 +583,7 @@ Below is a **realistic `.piadina_env` example** for an Erlang/OTP release with d
   - `"RELEASE_ROOT"` = "{PAYLOAD_ROOT}"
   - `"ERL_CRASH_DUMP"` = "{PAYLOAD_ROOT}/log/erl_crash.dump"
   - `"RELX_REPLACE_OS_VARS"` = "true"
-- A user-defined map `"EXTRA"` contains:
+- A user-defined map `"CUSTOM_SETTINGS"` contains:
   - `"support_email"` = "support@example.com"
   - `"feature-flag"` = "on"
 
@@ -618,9 +618,9 @@ ENV_RELEASE_ROOT="${PAYLOAD_ROOT}"
 ENV_ERL_CRASH_DUMP="${PAYLOAD_ROOT}/log/erl_crash.dump"
 ENV_RELX_REPLACE_OS_VARS="true"
 
-# User-defined map EXTRA exported with prefix only
-EXTRA_SUPPORT_EMAIL="support@example.com"
-EXTRA_FEATURE_FLAG="on"
+# User-defined map exported with prefix only
+CUSTOM_SETTINGS_SUPPORT_EMAIL="support@example.com"
+CUSTOM_SETTINGS_FEATURE_FLAG="on"
 
 # Unprefixed ENV variables written last so they override any earlier definitions
 RELEASE_ROOT="${PAYLOAD_ROOT}"
@@ -765,7 +765,7 @@ Key paths:
   - Examples:
     - `ENV.DB_HOST`
     - `ENV.secret-key`
-    - `EXTRA.support_email`
+    - `CUSTOM_SETTINGS.support_email`
 - **Array elements**:
   - Indexed form: `ARRAY[INDEX]`
     - Example: `ENTRY_ARGS[0]`, `ENTRY_ARGS[1]`
@@ -819,9 +819,9 @@ Examples:
   - `--meta ENV.ERL_CRASH_DUMP="{PAYLOAD_ROOT}/log/erl_crash.dump"`
   - `--meta ENV.RELX_REPLACE_OS_VARS=true`
 
-- **User-defined map (EXTRA)**:
-  - `--meta EXTRA.support_email=support@example.com`
-  - `--meta EXTRA.feature-flag=on`
+- **User-defined map example**:
+  - `--meta CUSTOM_SETTINGS.support_email=support@example.com`
+  - `--meta CUSTOM_SETTINGS.feature-flag=on`
 
 Help and discoverability:
 
@@ -888,7 +888,7 @@ Implementation note (non-normative, for early prototypes only):
   - `libarchive` (with gzip support) for tar+gzip handling.
   - `libcbor` for metadata encoding/decoding.
 - These libraries MUST be used in a way that preserves the on-disk formats defined in this specification and are always accessed via the internal abstraction layers.
-- In later roadmap milestones (14 and 15), in-tree tar and CBOR implementations become the **default**, while support for building against `libarchive` and `libcbor` MAY be retained behind configure-time options.
+- In later roadmap milestones (15 and 16), in-tree tar and CBOR implementations become the **default**, while support for building against `libarchive` and `libcbor` MAY be retained behind configure-time options.
 - The choice between the in-tree implementations and the external libraries is **conditional and driven by the Autotools `configure` script**, which sets feature macros in `piadina_config.h` that control which backend each module delegates to at build time.
 
 No Erlang/Elixir-specific dependencies are required at runtime.
@@ -969,7 +969,7 @@ These modules live under a shared `common/` directory (plus the Autotools-genera
 
 - **`metadata_core.{c,h}`**
   - Shared metadata schema definitions and helpers:
-    - Constants and enumerations for well-known fields and maps (e.g. `VERSION`, `APP_NAME`, `ENTRY_POINT`, `ENV`, `EXTRA`).
+    - Constants and enumerations for well-known fields and maps (e.g. `VERSION`, `APP_NAME`, `ENTRY_POINT`, `ENV`).
     - Shared validation helpers for key naming, allowed value sets (e.g. `CLEANUP_POLICY`, `LOG_LEVEL`), and required/optional fields.
     - Utilities to apply defaults and to map between CBOR keys and internal field identifiers.
 
@@ -981,21 +981,21 @@ These modules live under a shared `common/` directory (plus the Autotools-genera
 - **`tar_decoder.{c,h}`**
   - Shared tar **reader/decoder interface**:
     - Defines the abstraction for iterating over entries in a decompressed tar stream and extracting them under a specified root directory.
-    - The eventual in-tree implementation (introduced in roadmap milestone 14) MUST:
+    - The eventual in-tree implementation (introduced in roadmap milestone 15) MUST:
       - Create directories, regular files, and symbolic links under the target root.
       - Apply basic metadata such as file modes and timestamps to the extent required by the runtime.
       - Enforce safety constraints so that extraction cannot escape the intended payload root (e.g. via `..` or symlink tricks).
-    - Before milestone 14, Piadina uses `extractor_tar_gzip` backed by `libarchive` to realize these semantics.
+    - Before milestone 15, Piadina uses `extractor_tar_gzip` backed by `libarchive` to realize these semantics.
 
 - **`tar_encoder.{c,h}`**
   - Shared tar **writer/encoder interface**:
     - Defines the abstraction for producing a tar stream from a directory tree.
-    - The eventual in-tree implementation (introduced in roadmap milestone 14) MUST:
+    - The eventual in-tree implementation (introduced in roadmap milestone 15) MUST:
       - Produce a deterministic ordering (e.g. lexicographic by path) so that hashing and reproducible builds behave as expected.
       - Cooperate with shared hashing helpers so that `PAYLOAD_HASH` and `ARCHIVE_HASH` can be computed consistently from the same directory traversal.
       - NOT follow or dereference symbolic links whose resolved target lies **outside** the payload root directory; encountering such a link SHOULD result in a clear, user-facing error rather than silently including external files.
       - For symbolic links whose target is an **absolute path** that canonically resolves **inside** the payload root, MAY rewrite the stored link target to an equivalent **relative path** within the root to improve portability, while preserving the fact that the entry is a symbolic link.
-    - Before milestone 14, Azdora uses `packer_tar_gzip` backed by `libarchive` to implement archive creation in a way that is compatible with these requirements.
+    - Before milestone 15, Azdora uses `packer_tar_gzip` backed by `libarchive` to implement archive creation in a way that is compatible with these requirements.
 
 - **`log.{c,h}`**
   - Simple logging abstraction with log levels.
@@ -1119,7 +1119,7 @@ At a high level, Azdora will require:
     - Applies the same safety and path-normalization rules required by the tar abstractions (no escaping the payload root, deterministic ordering where practical).
     - Translates `libarchive` status and error codes into Azdora’s project-specific error model.
   - For the first implementation stage, this module is the sole implementation used by Azdora to create the archive block for `"tar+gzip"`.
-  - In roadmap milestone 14, `packer_tar_gzip` will be updated to delegate to the in-tree `tar_encoder` implementation (rather than calling `libarchive` directly), so that archive creation goes through the shared tar abstraction layer.
+  - In roadmap milestone 15, `packer_tar_gzip` will be updated to delegate to the in-tree `tar_encoder` implementation (rather than calling `libarchive` directly), so that archive creation goes through the shared tar abstraction layer.
 
 - **`assembler.{c,h}`**
   - Binary assembler:
@@ -1207,8 +1207,9 @@ Planned development phases for Piadina and Azdora as a combined project. Each mi
    - **Implementation**:
      - Implement `common/cbor_core.{c,h}` with the minimal CBOR subset from §3.2:
        - Unsigned integers, booleans, text strings, byte strings, arrays, and maps with string keys.
+        - For this milestone these functions are **thin wrappers around `libcbor`**, so no custom encoder is written yet; all callers see only the `cbor_core` API so the backend can be swapped later without touching higher layers.
      - Implement `common/metadata_core.{c,h}`:
-       - Enumerations/constants for all defined metadata keys and maps (`VERSION`, `APP_NAME`, `ENTRY_POINT`, `ENV`, `EXTRA`, etc.).
+       - Enumerations/constants for well-known metadata entries (`VERSION`, `APP_NAME`, `ENTRY_POINT`, `ENV`, etc.).
        - Validation helpers for key naming and allowed values (`CLEANUP_POLICY`, `LOG_LEVEL`, `ARCHIVE_FORMAT`, etc.).
        - Defaulting helpers (e.g. default `LOG_LEVEL="info"`).
    - **Expected output**:
@@ -1221,7 +1222,17 @@ Planned development phases for Piadina and Azdora as a combined project. Each mi
        - Key naming acceptance/rejection.
        - Enforcement of enumerated values and defaults.
 
-4. **Minimal Piadina launcher skeleton (no tar yet)**
+4. **Static build support**
+   - **Implementation**:
+     - Make fully static builds the default: configure should attempt to produce statically linked `piadina`/`azdora` (musl or glibc `-static`) without extra flags.
+     - Detect the presence of static variants of required libraries (`libc`, `libcbor`, `libarchive`, `libz`, etc.) and fail configure early with actionable guidance if any are missing.
+     - Provide an opt-out flag such as `--disable-static-build` that falls back to dynamic linking when engineers need it.
+     - Update the README/developer docs to describe the default static behavior, prerequisites (e.g. musl toolchain), and how to opt out when static builds aren’t possible.
+   - **Testing**:
+     - Extend CI (or add a scripted check) that runs `./configure && make && make check`, then verifies `ldd piadina/piadina` and `ldd azdora/azdora` report “not a dynamic executable”.
+     - Ensure the static build still runs the full unit/integration test suite so regressions are caught early.
+
+5. **Minimal Piadina launcher skeleton (no tar yet)**
    - **Implementation**:
      - Implement `piadina/config.{c,h}`:
        - Parse launcher CLI options (`--launcher-*`) and `PIADINA_*` environment variables into a `struct piadina_config`.
@@ -1240,7 +1251,7 @@ Planned development phases for Piadina and Azdora as a combined project. Each mi
      - Unit tests for `process` (once stubbed in) that verify exit codes are propagated correctly for normal exits and signaled exits (using small helper programs).
      - Integration test that runs the launcher against a test file with a valid footer and checks that `/bin/echo` is executed and that the launcher’s exit status matches.
 
-5. **Minimal Azdora skeleton: assembling a minimal binary**
+6. **Minimal Azdora skeleton: assembling a minimal binary**
    - **Implementation**:
      - Implement `azdora/config.{c,h}`:
        - Parse `--launcher`/`-l`, `--payload`/`-p`, `--output`/`-o`, and first `--meta`/`-m` flags into an internal configuration structure (even if metadata handling is partial at this stage).
@@ -1262,7 +1273,7 @@ Planned development phases for Piadina and Azdora as a combined project. Each mi
        - Run Azdora on a sample payload.
        - Verify the resulting binary has the expected layout and that `footer_read` and CBOR decoding succeed.
 
-6. **Tar integration via libarchive (skipping payload hashing for now)**
+7. **Tar integration via libarchive (skipping payload hashing for now)**
    - **Implementation**:
      - Define the shared tar interfaces `common/tar_encoder.{c,h}` and `common/tar_decoder.{c,h}` (signatures and error model) without providing a full in-tree implementation yet.
      - Implement `piadina/extractor_tar_gzip.{c,h}` to:
@@ -1278,9 +1289,9 @@ Planned development phases for Piadina and Azdora as a combined project. Each mi
      - Integration test:
        - Create a payload on disk, pack it with Azdora, and assert the archive is valid tar+gzip and can be extracted by Piadina.
 
-7. **Full metadata decoding/encoding and templating (via libcbor)**
+8. **Full metadata decoding/encoding and templating (via libcbor)**
    - **Implementation**:
-     - Implement `common/cbor_core.{c,h}`, `piadina/cbor_decode.{c,h}`, and `azdora/cbor_encode.{c,h}` as abstraction layers over `libcbor` that fully support the schema in §3.2, including maps and arrays (`ENTRY_ARGS`, `ENV`, `EXTRA`).
+     - Implement `common/cbor_core.{c,h}`, `piadina/cbor_decode.{c,h}`, and `azdora/cbor_encode.{c,h}` as abstraction layers over `libcbor` that fully support the schema in §3.2, including maps and arrays (`ENTRY_ARGS`, `ENV`, and user-defined maps).
      - Extend Azdora’s `metadata` and `cbor_encode` to build/encode all fields from `--meta` input using these abstractions.
      - Implement `piadina/template.{c,h}` and integrate templating into `context.{c,h}`:
        - Resolve `CACHE_ROOT`, `PAYLOAD_ROOT`, and metadata `ENV` values using the templating rules.
@@ -1291,7 +1302,7 @@ Planned development phases for Piadina and Azdora as a combined project. Each mi
      - Unit tests for templating substitution (correct order and failure on unknown variables).
      - Integration tests where Azdora generates metadata for several scenarios (different `CACHE_ROOT`, `PAYLOAD_ROOT`, `ENV`) and Piadina resolves them as expected.
 
-8. **Extraction and basic caching (single-process)**
+9. **Extraction and basic caching (single-process)**
    - **Implementation**:
      - Complete `archive.{c,h}`, `extractor_tar_gzip.{c,h}`, and the portions of `context.{c,h}` needed to compute `TEMP_DIR` and `PAYLOAD_ROOT` and drive archive extraction, following §4.3 but without full lock/ready-marker semantics.
      - Implement extraction of tar+gzip archives into `TEMP_DIR` and atomic promotion to `PAYLOAD_ROOT` for the single-process case.
@@ -1309,7 +1320,7 @@ Planned development phases for Piadina and Azdora as a combined project. Each mi
        - Piadina extracts it and launches the payload once.
        - Re-run Piadina sequentially to confirm it reuses the cache without re-extracting.
 
-9. **Lock management and ready markers**
+10. **Lock management and ready markers**
    - **Implementation**:
      - Complete `lock.{c,h}` and integrate file-based lock acquisition and stale-lock detection as in §4.3.2.
      - Extend `context.{c,h}` and extraction logic to use `TEMP_DIR`, `LOCK_FILE`, and `READY_MARKER` as in §4.3.1 and §4.3.3.
@@ -1322,7 +1333,7 @@ Planned development phases for Piadina and Azdora as a combined project. Each mi
        - Multiple concurrent Piadina runs for the same payload coordinate via the lock and do not corrupt the cache.
        - Re-run Piadina to confirm it reuses the cache across concurrent and sequential runs.
 
-10. **Process lifecycle, exit codes, and cleanup policies**
+11. **Process lifecycle, exit codes, and cleanup policies**
    - **Implementation**:
      - Finalize `process.{c,h}`:
        - Correct `argv` assembly (`ENTRY_POINT`, `ENTRY_ARGS`, CLI args after `--`, `ENTRY_ARGS_POST`).
@@ -1341,7 +1352,7 @@ Planned development phases for Piadina and Azdora as a combined project. Each mi
        - Pack an escript-like payload that exits with `0` and non-`0` and assert Piadina’s exit code matches.
        - Verify that `oncrash` only deletes the cache on non-zero exits or signals.
 
-11. **Exported Metadata File (`.piadina_env`)**
+12. **Exported Metadata File (`.piadina_env`)**
     - **Implementation**:
       - Implement the `.piadina_env` writer and integrate it under the extraction lock, as in §4.3.4.
       - Ensure environment variables defined in `ENV` are exported in unprefixed form at the end of the file.
@@ -1354,7 +1365,7 @@ Planned development phases for Piadina and Azdora as a combined project. Each mi
        - Integration tests:
          - Verify that sourcing the generated file sets the expected variables.
 
-12. **Payload Hashing and Verification**
+13. **Payload Hashing and Verification**
     - **Implementation**:
       - Implement shared payload/archive hashing helpers that use the tar traversal to compute `PAYLOAD_HASH` and `ARCHIVE_HASH`.
       - Integrate hashing into `assembler` (Azdora) to populate the real hash values.
@@ -1369,7 +1380,7 @@ Planned development phases for Piadina and Azdora as a combined project. Each mi
         - Create two identical payloads on disk, pack each, and assert their `PAYLOAD_HASH` and `ARCHIVE_HASH` match.
         - Verify that `Piadina` detects modified payloads when `VALIDATE` is on.
 
-13. **Extended integration (Linux)**
+14. **Extended integration (Linux)**
     - **Implementation**:
       - Refine any Linux-specific behaviors.
       - Add any small Azdora/launcher enhancements that arise from initial real-world use (e.g. additional diagnostics, `--launcher-print-*` improvements).
@@ -1380,7 +1391,7 @@ Planned development phases for Piadina and Azdora as a combined project. Each mi
       - Periodically run `make check` under a memory checker (such as Valgrind) to detect leaks and invalid memory accesses.
       - Add integration tests for OS-specific behaviors as they are implemented.
 
-14. **In-tree tar implementation (replacing vendored tar backend)**
+15. **In-tree tar implementation (replacing vendored tar backend)**
     - **Implementation**:
       - Treat `common/tar_encoder.{c,h}` and `common/tar_decoder.{c,h}` as the **stable tar abstraction layer** used by Azdora and Piadina.
       - Replace any internal use of `libarchive` within these modules with a minimal, self-contained tar encoder/decoder that:
@@ -1396,7 +1407,7 @@ Planned development phases for Piadina and Azdora as a combined project. Each mi
       - Round-trip tests encoding and decoding directories using only the in-tree tar code.
       - Re-running the full integration test suite with the vendored tar backend disabled.
 
-15. **In-tree CBOR implementation (replacing vendored CBOR backend)**
+16. **In-tree CBOR implementation (replacing vendored CBOR backend)**
     - **Implementation**:
       - Treat `common/cbor_core.{c,h}`, `piadina/cbor_decode.{c,h}`, and `azdora/cbor_encode.{c,h}` as the **stable CBOR abstraction layer** for all metadata encoding/decoding.
       - Replace any internal use of `libcbor` inside these modules with a minimal, self-contained encoder/decoder that supports only the CBOR subset required by the metadata schema (§3.2).

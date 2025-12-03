@@ -6,4 +6,8 @@ libcommon_a_SOURCES = \
 	platform.c \
 	platform.h \
 	footer.c \
-	footer.h
+	footer.h \
+	cbor_core.c \
+	cbor_core.h \
+	metadata_core.c \
+	metadata_core.h

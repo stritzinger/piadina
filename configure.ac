@@ -9,6 +9,9 @@ AM_SILENT_RULES([yes])
 AC_PROG_CC
 AC_PROG_RANLIB
 
+AC_CHECK_HEADER([cbor.h], [], [AC_MSG_ERROR([libcbor headers not found])])
+AC_SEARCH_LIBS([cbor_load], [cbor], [], [AC_MSG_ERROR([libcbor library not found])])
+
 AC_DEFINE([PACKAGE_COPYRIGHT], [Copyright 2024, Dipl.Phys. Peer Stritzinger GmbH <peer@stritzinger.org>.], [Package copyright])
 
 AC_CONFIG_FILES([

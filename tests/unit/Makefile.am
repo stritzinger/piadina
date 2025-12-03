@@ -6,7 +6,9 @@ check_PROGRAMS = \
 	test_smoke \
 	test_log \
 	test_platform \
-	test_footer
+	test_footer \
+	test_cbor_core \
+	test_metadata_core
 
 TESTS = $(check_PROGRAMS)
 
@@ -23,3 +25,9 @@ test_platform_LDADD = $(LDADD)
 
 test_footer_SOURCES = test_footer.c ../unity/unity.c
 test_footer_LDADD = $(LDADD)
+
+test_cbor_core_SOURCES = test_cbor_core.c ../unity/unity.c
+test_cbor_core_LDADD = $(LDADD)
+
+test_metadata_core_SOURCES = test_metadata_core.c ../unity/unity.c
+test_metadata_core_LDADD = $(LDADD)

@@ -168,109 +168,139 @@ Mark items as you complete them.
 
 ### Tests for milestone 2
 
-- [ ] **Unit tests for `log`**
-  - [ ] Verify each log-level function is callable without crashing.
-  - [ ] Optionally capture `stderr` to confirm formatting and level filtering.
+- [x] **Unit tests for `log`**
+  - [x] Verify each log-level function is callable without crashing.
+  - [x] Optionally capture `stderr` to confirm formatting and level filtering.
 
-- [ ] **Unit tests for `platform_get_self_exe_path()` (Linux)**
-  - [ ] Test successful path resolution on Linux.
-  - [ ] Test buffer too small case returns an appropriate error.
+- [x] **Unit tests for `platform_get_self_exe_path()` (Linux)**
+  - [x] Test successful path resolution on Linux.
+  - [x] Test buffer too small case returns an appropriate error.
 
-- [ ] **Unit tests for `footer_read()` and `footer_validate()`**
-  - [ ] Create a temporary file with a valid footer and assert:
-    - [ ] `footer_read` succeeds.
-    - [ ] `footer_validate` succeeds.
-  - [ ] Create a file with wrong magic and assert:
-    - [ ] `footer_validate` returns “bad magic” error.
-  - [ ] Create a truncated file and assert:
-    - [ ] `footer_read` reports explicit error.
+- [x] **Unit tests for `footer_read()` and `footer_validate()`**
+  - [x] Create a temporary file with a valid footer and assert:
+    - [x] `footer_read` succeeds.
+    - [x] `footer_validate` succeeds.
+  - [x] Create a file with wrong magic and assert:
+    - [x] `footer_validate` returns "bad magic" error.
+  - [x] Create a file with wrong layout version and assert:
+    - [x] `footer_validate` returns "bad version" error.
+  - [x] Create a file with non-zero reserved bytes and assert:
+    - [x] `footer_validate` returns "reserved non-zero" error.
+  - [x] Create a truncated file and assert:
+    - [x] `footer_read` reports explicit error.
 
 ---
 
 ## Milestone 3 – Shared CBOR and Metadata Core Primitives
 
+> For this milestone, all CBOR helpers are thin wrappers around `libcbor`. The goal is to finalize the abstraction (`cbor_core`, encoder, decoder, metadata helpers) so that swapping the backend later requires no API changes elsewhere in the project.
+
 ### `common/cbor_core.{c,h}`
 
-- [ ] **Type and constant definitions**
-  - [ ] Define basic CBOR type tags/constants for:
-    - [ ] Unsigned integers.
-    - [ ] Booleans.
-    - [ ] Text strings.
-    - [ ] Byte strings.
-    - [ ] Arrays.
-    - [ ] Maps with string keys.
+- [x] **Type and constant definitions**
+  - [x] Define basic CBOR type tags/constants for:
+    - [x] Unsigned integers.
+    - [x] Booleans.
+    - [x] Text strings.
+    - [x] Byte strings.
+    - [x] Arrays.
+    - [x] Maps with string keys.
 
-- [ ] **Encoding primitives**
-  - [ ] Design function signatures for encoding:
-    - [ ] Unsigned integers.
-    - [ ] Booleans (`true`/`false`).
-    - [ ] Text strings (length + UTF-8 bytes).
-    - [ ] Byte strings.
-    - [ ] Array headers (length + items encoded by callers).
-    - [ ] Map headers with string keys.
-  - [ ] Provide an internal abstraction that can be backed by a vendored CBOR library (`libcbor`) for the initial prototype.
+- [x] **Encoding primitives**
+  - [x] Design function signatures for encoding:
+    - [x] Unsigned integers.
+    - [x] Booleans (`true`/`false`).
+    - [x] Text strings (length + UTF-8 bytes).
+    - [x] Byte strings.
+    - [x] Array headers (length + items encoded by callers).
+    - [x] Map headers with string keys.
+  - [x] Provide an internal abstraction that can be backed by a vendored CBOR library (`libcbor`) for the initial prototype.
 
-- [ ] **Decoding primitives**
-  - [ ] Design function signatures for decoding:
-    - [ ] Unsigned integers.
-    - [ ] Booleans.
-    - [ ] Text strings (pointer/length).
-    - [ ] Byte strings.
-    - [ ] Array headers and iterating items.
-    - [ ] Map headers and iterating over string-key entries.
-  - [ ] Implement these functions initially as thin wrappers over the chosen CBOR library, translating between its API and the `cbor_core` abstraction.
-  - [ ] Provide clear error codes for malformed CBOR or unsupported types, independent of the underlying library’s error representation.
+- [x] **Decoding primitives**
+  - [x] Design function signatures for decoding:
+    - [x] Unsigned integers.
+    - [x] Booleans.
+    - [x] Text strings (pointer/length).
+    - [x] Byte strings.
+    - [x] Array headers and iterating items.
+    - [x] Map headers and iterating over string-key entries.
+  - [x] Implement these functions initially as thin wrappers over the chosen CBOR library, translating between its API and the `cbor_core` abstraction.
+  - [x] Provide clear error codes for malformed CBOR or unsupported types, independent of the underlying library’s error representation.
 
 ### `common/metadata_core.{c,h}`
 
-- [ ] **Schema constants and enums**
-  - [ ] Define constants/enums for top-level fields:
-    - [ ] `VERSION`, `APP_NAME`, `APP_VER`, `ARCHIVE_HASH`, `ARCHIVE_FORMAT`,
+- [x] **Schema constants and enums**
+  - [x] Define constants/enums for top-level fields:
+    - [x] `VERSION`, `APP_NAME`, `APP_VER`, `ARCHIVE_HASH`, `ARCHIVE_FORMAT`,
       `PAYLOAD_HASH`, `ENTRY_POINT`, `ENTRY_ARGS`, `ENTRY_ARGS_POST`, `CACHE_ROOT`,
-      `PAYLOAD_ROOT`, `CLEANUP_POLICY`, `VALIDATE`, `LOG_LEVEL`, `ENV`, `EXTRA`, etc.
+      `PAYLOAD_ROOT`, `CLEANUP_POLICY`, `VALIDATE`, `LOG_LEVEL`, `ENV`, and user-defined maps, etc.
 
-- [ ] **Key naming validation**
-  - [ ] Implement function to verify key names match `[a-zA-Z-_][a-zA-Z0-9-_]*`.
-  - [ ] Ensure usage in both encoder and decoder paths.
+- [x] **Key naming validation**
+  - [x] Implement function to verify key names match `[a-zA-Z-_][a-zA-Z0-9-_]*`.
+  - [x] Ensure usage in both encoder and decoder paths.
 
-- [ ] **Enum value validation**
-  - [ ] Implement validators for:
-    - [ ] `CLEANUP_POLICY` (values `never`, `oncrash`, `always`).
-    - [ ] `LOG_LEVEL` (values `debug`, `info`, `warn`, `error`).
-    - [ ] `ARCHIVE_FORMAT` (must be `"tar+gzip"` in v0.1).
+- [x] **Enum value validation**
+  - [x] Implement validators for:
+    - [x] `CLEANUP_POLICY` (values `never`, `oncrash`, `always`).
+    - [x] `LOG_LEVEL` (values `debug`, `info`, `warn`, `error`).
+    - [x] `ARCHIVE_FORMAT` (must be `"tar+gzip"` in v0.1).
 
-- [ ] **Defaults and helpers**
-  - [ ] Implement helpers to:
-    - [ ] Apply default `ARCHIVE_FORMAT="tar+gzip"` when absent.
-    - [ ] Apply default `CLEANUP_POLICY="oncrash"`.
-    - [ ] Apply default `VALIDATE=false`.
-    - [ ] Apply default `LOG_LEVEL="info"`.
-  - [ ] Provide API to map between CBOR keys (strings) and internal identifiers.
+- [x] **Defaults and helpers**
+  - [x] Implement helpers to:
+    - [x] Apply default `ARCHIVE_FORMAT="tar+gzip"` when absent.
+    - [x] Apply default `CLEANUP_POLICY="oncrash"`.
+    - [x] Apply default `VALIDATE=false`.
+    - [x] Apply default `LOG_LEVEL="info"`.
+  - [x] Provide API to map between CBOR keys (strings) and internal identifiers.
 
 ### Tests for milestone 3
 
-- [ ] **Unit tests for `cbor_core`**
-  - [ ] Round-trip tests using the `cbor_core` API (backed by the vendored CBOR library) for:
-    - [ ] Unsigned integers (various values).
-    - [ ] Booleans.
-    - [ ] Text strings (ASCII and UTF-8).
-    - [ ] Byte strings.
-    - [ ] Arrays and nested arrays/maps.
-  - [ ] Negative tests for malformed encodings, ensuring the abstraction returns consistent error codes regardless of the underlying library’s behavior.
+- [x] **Unit tests for `cbor_core`**
+  - [x] Round-trip tests using the `cbor_core` API (backed by the vendored CBOR library) for:
+    - [x] Unsigned integers (various values).
+    - [x] Booleans.
+    - [x] Text strings (ASCII and UTF-8).
+    - [x] Byte strings.
+    - [x] Arrays and nested arrays/maps.
+  - [x] Negative tests for malformed encodings, ensuring the abstraction returns consistent error codes regardless of the underlying library’s behavior.
 
-- [ ] **Unit tests for `metadata_core`**
-  - [ ] Key naming tests:
-    - [ ] Accept valid identifiers.
-    - [ ] Reject invalid ones.
-  - [ ] Enum value tests:
-    - [ ] Accept allowed values.
-    - [ ] Reject unknown values with clear errors.
-  - [ ] Defaults tests:
-    - [ ] Confirm default values are applied when fields are missing.
+- [x] **Unit tests for `metadata_core`**
+  - [x] Key naming tests:
+    - [x] Accept valid identifiers.
+    - [x] Reject invalid ones.
+  - [x] Enum value tests:
+    - [x] Accept allowed values.
+    - [x] Reject unknown values with clear errors.
+  - [x] Defaults tests:
+    - [x] Confirm default values are applied when fields are missing.
 
 ---
 
-## Milestone 4 – Minimal Piadina Launcher Skeleton (No Tar Yet)
+## Milestone 4 – Static Build Support
+
+### Configure / Toolchain detection
+
+- [ ] **Static-by-default**
+  - [ ] Make static builds the default: `configure` should attempt to produce fully static binaries (musl or glibc `-static`) without extra flags.
+  - [ ] Add `--disable-static-build` for situations where developers need dynamic binaries.
+
+- [ ] **Dependency verification**
+  - [ ] During `configure`, detect whether static variants of required libraries (`libc`, `libcbor`, `libarchive`, `libz`, etc.) are available; fail early with a clear error if any are missing.
+
+### Linking + docs
+
+- [ ] **Static linkage plumbing**
+  - [ ] When the static flag is enabled, ensure both `piadina` and `azdora` pass `-static` (or equivalent) and link against the static archives.
+  - [ ] Update the README/developer notes describing how to perform a static build locally and what prerequisites (musl toolchain, static libs) are needed.
+
+### Validation
+
+- [ ] **CI/test hook**
+  - [ ] Add a scripted test (can be optional) that runs the default (static) build (`./configure && make && make check`) and asserts `ldd piadina/piadina` and `ldd azdora/azdora` report “not a dynamic executable”.
+
+---
+
+## Milestone 5 – Minimal Piadina Launcher Skeleton (No Tar Yet)
 
 ### `piadina/config.{c,h}`
 
@@ -323,7 +353,7 @@ Mark items as you complete them.
     - [ ] `fork` + `execve` `/bin/echo` with test arguments.
     - [ ] Return child exit status as launcher exit code.
 
-### Tests for milestone 4
+### Tests for milestone 5
 
 - [ ] **Unit tests for `piadina/config`**
   - [ ] Test various combinations of CLI options and environment variables for correct precedence.
@@ -342,7 +372,7 @@ Mark items as you complete them.
 
 ---
 
-## Milestone 5 – Minimal Azdora Skeleton: Assembling a Minimal Binary
+## Milestone 6 – Minimal Azdora Skeleton: Assembling a Minimal Binary
 
 ### `azdora/config.{c,h}`
 
@@ -408,7 +438,7 @@ Mark items as you complete them.
     - [ ] Placeholder archive block.
     - [ ] Footer.
 
-### Tests for milestone 5
+### Tests for milestone 6
 
 - [ ] **Unit tests for `azdora/config`**
   - [ ] CLI parsing tests for each of `--launcher`, `--payload`, `--output`, `--meta`.
@@ -429,7 +459,7 @@ Mark items as you complete them.
 
 ---
 
-## Milestone 6 – Tar Integration via `libarchive` (Deferring Payload Hashing)
+## Milestone 7 – Tar Integration via `libarchive` (Deferring Payload Hashing)
 
 ### `common/tar_encoder.{c,h}` and `common/tar_decoder.{c,h}`
 
@@ -438,7 +468,7 @@ Mark items as you complete them.
     - [ ] Creating a tar stream from a directory tree (`tar_encoder`).
     - [ ] Extracting a decompressed tar stream into a target directory (`tar_decoder`).
   - [ ] Define shared error codes and basic invariants (e.g. path normalization, safety rules) that will be honored by the future in-tree implementation.
-  - [ ] Ensure these interfaces will be suitable for being implemented without `libarchive` in milestone 14.
+  - [ ] Ensure these interfaces will be suitable for being implemented without `libarchive` in milestone 15.
 
 ### `piadina/extractor_tar_gzip.{c,h}` (via `libarchive`)
 
@@ -465,7 +495,7 @@ Mark items as you complete them.
     - [ ] Walk the payload directory and produce a tar+gzip archive using `libarchive`.
     - [ ] Write the resulting tar+gzip stream into the archive block region of the final binary.
   - [ ] For now, continue to use placeholder or zeroed hashes in footer/metadata (until hashing is implemented in milestone 12).
-### Tests for milestone 6
+### Tests for milestone 7
 
 - [ ] **Unit tests for `extractor_tar_gzip` and `packer_tar_gzip`**
   - [ ] Create simple directory trees (files, dirs, symlinks).
@@ -485,7 +515,7 @@ Mark items as you complete them.
 
 ---
 
-## Milestone 7 – Full Metadata Decoding/Encoding and Templating
+## Milestone 8 – Full Metadata Decoding/Encoding and Templating
 
 ### Piadina metadata decode (`piadina/cbor_decode.{c,h}` and `piadina/metadata.{c,h}`)
 
@@ -493,7 +523,7 @@ Mark items as you complete them.
   - [ ] Define `struct piadina_metadata` with fields for:
     - [ ] All top-level scalars (`VERSION`, `APP_NAME`, etc.).
     - [ ] Arrays (`ENTRY_ARGS`, `ENTRY_ARGS_POST`).
-    - [ ] Maps (`ENV`, `EXTRA`, etc.).
+    - [ ] Maps (`ENV`, user-defined maps, etc.).
 
 - [ ] **CBOR decode implementation**
   - [ ] Implement schema-aware decoder:
@@ -511,7 +541,7 @@ Mark items as you complete them.
   - [ ] Extend Azdora’s metadata structure to fully represent:
     - [ ] Top-level fields.
     - [ ] Arrays (`ENTRY_ARGS`, `ENTRY_ARGS_POST`).
-    - [ ] Maps (`ENV`, `EXTRA`, and future maps).
+  - [ ] Maps (`ENV`, user-defined maps, and future maps).
 
 - [ ] **`--meta` key-path parsing**
   - [ ] Implement parsing for:
@@ -554,7 +584,7 @@ Mark items as you complete them.
     - [ ] Resolve `PAYLOAD_ROOT` next (from metadata or default `"{PAYLOAD_HASH}"` combined with cache root).
     - [ ] Apply substitution in `ENV` entries last, using all known variables.
 
-### Tests for milestone 7
+### Tests for milestone 8
 
 - [ ] **Unit tests for metadata decode/encode**
   - [ ] Round-trip tests for full metadata structures through Azdora encode → Piadina decode.
@@ -575,7 +605,7 @@ Mark items as you complete them.
 
 ---
 
-## Milestone 8 – Extraction and Basic Caching (Single-Process)
+## Milestone 9 – Extraction and Basic Caching (Single-Process)
 
 ### Archive abstraction (`piadina/archive.{c,h}` and `piadina/extractor_tar_gzip.{c,h}`)
 
@@ -621,7 +651,7 @@ Mark items as you complete them.
     - [ ] Single-process, sequential runs reuse existing `PAYLOAD_ROOT` where possible.
     - [ ] No `.piadina_env` or validation/cleanup policies beyond a simple default.
 
-### Tests for milestone 8
+### Tests for milestone 9
 
 - [ ] **Integration tests**
   - [ ] Use Azdora to pack a small payload (e.g. simple shell script or small program).
@@ -633,7 +663,7 @@ Mark items as you complete them.
 
 ---
 
-## Milestone 9 – Lock Management and Ready Markers
+## Milestone 10 – Lock Management and Ready Markers
 
 ### Locking (`piadina/lock.{c,h}`)
 
@@ -675,7 +705,7 @@ Mark items as you complete them.
         - [ ] Create/update `READY_MARKER`.
     - [ ] Release lock and unlink lock file when done.
 
-### Tests for milestone 9
+### Tests for milestone 10
 
 - [ ] **Unit tests for `lock`**
   - [ ] Single process lock acquire/release.
@@ -690,7 +720,7 @@ Mark items as you complete them.
 
 ---
 
-## Milestone 10 – Process Lifecycle, Exit Codes, and Cleanup Policies
+## Milestone 11 – Process Lifecycle, Exit Codes, and Cleanup Policies
 
 ### Process management (`piadina/process.{c,h}`)
 
@@ -747,7 +777,7 @@ Mark items as you complete them.
     - [ ] `115` – launch error.
     - [ ] `116` – signal/system error.
 
-### Tests for milestone 10
+### Tests for milestone 11
 
 - [ ] **Unit tests for `process`**
   - [ ] Verify `argv` ordering.
@@ -767,7 +797,7 @@ Mark items as you complete them.
 
 ---
 
-## Milestone 11 – Exported Metadata File (`.piadina_env`)
+## Milestone 12 – Exported Metadata File (`.piadina_env`)
 
 ### `.piadina_env` writer
 
@@ -806,7 +836,7 @@ Mark items as you complete them.
     - [ ] After successful extraction or validated reuse:
       - [ ] Write or refresh `.piadina_env`.
 
-### Tests for milestone 11
+### Tests for milestone 12
 
 - [ ] **Unit tests for `.piadina_env` writer**
   - [ ] Verify correct formatting and escaping for:
@@ -817,14 +847,14 @@ Mark items as you complete them.
   - [ ] Verify collision behavior where `ENV` overrides metadata keys.
 
 - [ ] **Integration tests**
-  - [ ] Pack a payload with `ENV`, `EXTRA`, and `ENTRY_ARGS`.
+- [ ] Pack a payload with `ENV`, a user-defined map, and `ENTRY_ARGS`.
   - [ ] Run Piadina and inspect `.piadina_env`:
     - [ ] `source` the file in a shell.
     - [ ] Confirm the environment matches expectations and application runs correctly.
 
 ---
 
-## Milestone 12 – Payload Hashing and Verification
+## Milestone 13 – Payload Hashing and Verification
 
 ### Shared hashing helpers
 
@@ -858,7 +888,7 @@ Mark items as you complete them.
   - [ ] Honor `force_extract` configuration:
     - [ ] When `force_extract=true`, re-extract regardless of validation result.
 
-### Tests for milestone 12
+### Tests for milestone 13
 
 - [ ] **Unit tests for hashing**
   - [ ] Two identical trees produce identical `PAYLOAD_HASH`.
@@ -873,7 +903,7 @@ Mark items as you complete them.
 
 ---
 
-## Milestone 13 – Extended Integration (Linux)
+## Milestone 14 – Extended Integration (Linux)
 
 ### Linux-specific refinements
 
@@ -906,7 +936,7 @@ Mark items as you complete them.
 
 ---
 
-## Milestone 14 – In-Tree Tar Implementation (Replacing Vendored Tar Backend)
+## Milestone 15 – In-Tree Tar Implementation (Replacing Vendored Tar Backend)
 
 > Goal: Replace the interim vendored tar implementation (via `libarchive`) with a minimal, self-contained tar encoder/decoder while preserving the existing `tar_encoder` / `tar_decoder` abstraction.
 
@@ -973,7 +1003,7 @@ Mark items as you complete them.
     - [ ] Remove vendored tar library entirely, or
     - [ ] Keep it compiled-out behind a configure flag (e.g. `--with-system-tar`), defaulting to the in-tree implementation.
 
-### Tests for milestone 14
+### Tests for milestone 15
 
 - [ ] **Golden-file comparisons**
   - [ ] For each reference payload tree:
@@ -992,7 +1022,7 @@ Mark items as you complete them.
 
 ---
 
-## Milestone 15 – In-Tree CBOR Implementation (Replacing Vendored CBOR Backend)
+## Milestone 16 – In-Tree CBOR Implementation (Replacing Vendored CBOR Backend)
 
 > Goal: Replace the interim vendored CBOR implementation (`libcbor`) with a minimal, self-contained encoder/decoder behind the existing `cbor_core` / `cbor_encode` / `cbor_decode` abstractions.
 
@@ -1041,7 +1071,7 @@ Mark items as you complete them.
   - [ ] Remove direct dependencies on the external CBOR library, or
     - [ ] Make it optional via a configure flag (e.g. `--with-system-cbor`), defaulting to the in-tree implementation.
 
-### Tests for milestone 15
+### Tests for milestone 16
 
 - [ ] **Golden encoding tests**
   - [ ] For each golden metadata structure:

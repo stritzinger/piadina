@@ -75,6 +75,38 @@ static void test_footer_detects_bad_magic(void)
     close(fd);
 }
 
+static void test_footer_detects_bad_version(void)
+{
+    int fd = create_temp_file();
+    piadina_footer_t footer = make_valid_footer();
+    footer.layout_version = 999; /* unsupported version */
+
+    uint64_t data_size = footer.archive_offset + footer.archive_size;
+    ensure_data_region(fd, data_size);
+    write_or_fail(fd, &footer, sizeof(footer));
+
+    piadina_footer_t out;
+    TEST_ASSERT_EQUAL(FOOTER_ERR_BAD_VERSION, footer_read(fd, &out));
+
+    close(fd);
+}
+
+static void test_footer_detects_reserved_nonzero(void)
+{
+    int fd = create_temp_file();
+    piadina_footer_t footer = make_valid_footer();
+    footer.reserved[0] = 0xFF; /* non-zero reserved byte */
+
+    uint64_t data_size = footer.archive_offset + footer.archive_size;
+    ensure_data_region(fd, data_size);
+    write_or_fail(fd, &footer, sizeof(footer));
+
+    piadina_footer_t out;
+    TEST_ASSERT_EQUAL(FOOTER_ERR_RESERVED_NONZERO, footer_read(fd, &out));
+
+    close(fd);
+}
+
 static void test_footer_file_too_small(void)
 {
     int fd = create_temp_file();
@@ -148,6 +180,8 @@ int main(void)
     UNITY_BEGIN();
     RUN_TEST(test_footer_read_and_validate_success);
     RUN_TEST(test_footer_detects_bad_magic);
+    RUN_TEST(test_footer_detects_bad_version);
+    RUN_TEST(test_footer_detects_reserved_nonzero);
     RUN_TEST(test_footer_file_too_small);
     RUN_TEST(test_footer_metadata_range_invalid);
     RUN_TEST(test_footer_archive_out_of_bounds);
