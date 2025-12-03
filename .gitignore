@@ -33,6 +33,9 @@ Makefile
 /azdora/.deps/
 /azdora/.libs/
 /azdora/azdora
+/common/*.o
+/common/.deps/
+/common/libcommon.a
 
 # General build directories
 /build-aux/
@@ -41,6 +44,8 @@ Makefile
 /tests/**/.deps/
 /tests/**/.libs/
 /tests/unit/test_smoke
+/tests/unit/test_*
+!/tests/unit/test_*.c
 /tests/**/*.log
 /tests/**/*.trs
 /tests/**/*.o

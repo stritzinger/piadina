@@ -7,6 +7,7 @@ AM_INIT_AUTOMAKE([foreign subdir-objects color-tests])
 AM_SILENT_RULES([yes])
 
 AC_PROG_CC
+AC_PROG_RANLIB
 
 AC_DEFINE([PACKAGE_COPYRIGHT], [Copyright 2024, Dipl.Phys. Peer Stritzinger GmbH <peer@stritzinger.org>.], [Package copyright])
 

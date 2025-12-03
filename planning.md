@@ -96,75 +96,75 @@ Mark items as you complete them.
 
 ### `common/log.{c,h}`
 
-- [ ] **Design log API**
-  - [ ] Define log levels enum (e.g. `LOG_DEBUG`, `LOG_INFO`, `LOG_WARN`, `LOG_ERROR`).
-  - [ ] Define functions:
-    - [ ] `log_set_level(...)` to set current minimum log level.
-    - [ ] `log_get_level()` accessor.
-    - [ ] `log_debug(...)`, `log_info(...)`, `log_warn(...)`, `log_error(...)` (or a generic `log_log(level, ...)`).
-  - [ ] Decide on formatting convention (e.g. `[LEVEL] message`).
+- [x] **Design log API**
+  - [x] Define log levels enum (e.g. `LOG_DEBUG`, `LOG_INFO`, `LOG_WARN`, `LOG_ERROR`).
+  - [x] Define functions:
+    - [x] `log_set_level(...)` to set current minimum log level.
+    - [x] `log_get_level()` accessor.
+    - [x] `log_debug(...)`, `log_info(...)`, `log_warn(...)`, `log_error(...)` (or a generic `log_log(level, ...)`).
+  - [x] Decide on formatting convention (e.g. `[LEVEL] message`).
 
-- [ ] **Implementation**
-  - [ ] Implement logging functions, writing to `stderr`.
-  - [ ] Ensure functions are safe to call before configuration is fully initialized (sane defaults).
+- [x] **Implementation**
+  - [x] Implement logging functions, writing to `stderr`.
+  - [x] Ensure functions are safe to call before configuration is fully initialized (sane defaults).
 
 ### `common/platform.{c,h}`
 
-- [ ] **API definition**
-  - [ ] Define a function to get the current executable path:
-    - [ ] `int platform_get_self_exe_path(char *buf, size_t buf_size);`
-  - [ ] Define basic error codes or return conventions.
+- [x] **API definition**
+  - [x] Define a function to get the current executable path:
+    - [x] `int platform_get_self_exe_path(char *buf, size_t buf_size);`
+  - [x] Define basic error codes or return conventions.
 
-- [ ] **Linux implementation**
-  - [ ] Implement using `/proc/self/exe` when available:
-    - [ ] Use `readlink` to read the symlink.
-    - [ ] Null-terminate the result.
-    - [ ] Handle truncation and errors cleanly.
-  - [ ] Provide a fallback using `argv[0]` if `/proc/self/exe` is unavailable (design decision: may be done later or via helper).
+- [x] **Linux implementation**
+  - [x] Implement using `/proc/self/exe` when available:
+    - [x] Use `readlink` to read the symlink.
+    - [x] Null-terminate the result.
+    - [x] Handle truncation and errors cleanly.
+  - [x] Provide a fallback using `argv[0]` if `/proc/self/exe` is unavailable (design decision: may be done later or via helper).
 
-- [ ] **Non-Linux stubs**
-  - [ ] Provide stubs for other platforms (macOS/Windows) that:
-    - [ ] Compile but return clear “not implemented” error codes.
+- [x] **Non-Linux stubs**
+  - [x] Provide stubs for other platforms (macOS/Windows) that:
+    - [x] Compile but return clear “not implemented” error codes.
 
 ### `common/footer.{c,h}`
 
-- [ ] **Struct definition**
-  - [ ] Define a packed C struct matching §3.1.2:
-    - [ ] `magic[8]`.
-    - [ ] `uint32_t layout_version`.
-    - [ ] `uint64_t metadata_offset`.
-    - [ ] `uint64_t metadata_size`.
-    - [ ] `uint64_t archive_offset`.
-    - [ ] `uint64_t archive_size`.
-    - [ ] `uint8_t archive_hash[32]`.
-    - [ ] `uint8_t footer_hash[32]`.
-    - [ ] `uint8_t reserved[12]`.
-  - [ ] Ensure struct layout is tightly packed and little-endian (use static asserts if available).
+- [x] **Struct definition**
+  - [x] Define a packed C struct matching §3.1.2:
+    - [x] `magic[8]`.
+    - [x] `uint32_t layout_version`.
+    - [x] `uint64_t metadata_offset`.
+    - [x] `uint64_t metadata_size`.
+    - [x] `uint64_t archive_offset`.
+    - [x] `uint64_t archive_size`.
+    - [x] `uint8_t archive_hash[32]`.
+    - [x] `uint8_t footer_hash[32]`.
+    - [x] `uint8_t reserved[12]`.
+  - [x] Ensure struct layout is tightly packed and little-endian (use static asserts if available).
 
-- [ ] **Constants**
-  - [ ] Define `FOOTER_MAGIC = "PIADINA\0"`.
-  - [ ] Define `FOOTER_LAYOUT_VERSION = 1`.
-  - [ ] Define `FOOTER_SIZE` constant as `sizeof(struct footer)` and assert equals 64 bytes.
+- [x] **Constants**
+  - [x] Define `FOOTER_MAGIC = "PIADINA\0"`.
+  - [x] Define `FOOTER_LAYOUT_VERSION = 1`.
+  - [x] Define `FOOTER_SIZE` constant as `sizeof(struct footer)` and assert equals 64 bytes.
 
-- [ ] **Footer read/validate API**
-  - [ ] Declare functions:
-    - [ ] `int footer_read(int fd, struct footer *out_footer);`
-    - [ ] `int footer_validate(const struct footer *footer);`
-  - [ ] Define error codes for:
-    - [ ] Bad magic.
-    - [ ] Unsupported layout version.
-    - [ ] Short read / file too small.
-    - [ ] Footer checksum mismatch (if implemented at this stage or reserved for later).
+- [x] **Footer read/validate API**
+  - [x] Declare functions:
+    - [x] `int footer_read(int fd, struct footer *out_footer);`
+    - [x] `int footer_validate(const struct footer *footer);`
+  - [x] Define error codes for:
+    - [x] Bad magic.
+    - [x] Unsupported layout version.
+    - [x] Short read / file too small.
+    - [x] Footer checksum mismatch (if implemented at this stage or reserved for later).
 
-- [ ] **Implementation**
-  - [ ] Implement `footer_read`:
-    - [ ] Use `lseek` to position at `file_size - FOOTER_SIZE`.
-    - [ ] Read into `out_footer`.
-    - [ ] Handle errors and partial reads.
-  - [ ] Implement `footer_validate`:
-    - [ ] Verify `magic`.
-    - [ ] Verify `layout_version`.
-    - [ ] Optionally verify `reserved` bytes are zero for version 1.
+- [x] **Implementation**
+  - [x] Implement `footer_read`:
+    - [x] Use `lseek` to position at `file_size - FOOTER_SIZE`.
+    - [x] Read into `out_footer`.
+    - [x] Handle errors and partial reads.
+  - [x] Implement `footer_validate`:
+    - [x] Verify `magic`.
+    - [x] Verify `layout_version`.
+    - [x] Optionally verify `reserved` bytes are zero for version 1.
 
 ### Tests for milestone 2
 

@@ -76,7 +76,7 @@ From beginning to end, the file is:
 
 ##### 3.1.2 Footer Structure (Conceptual)
 
-The footer is a fixed-size binary structure, conceptually:
+The footer is a fixed-size padded/tightly-packed to exactly **128 bytes**binary structure, conceptually:
 
 - **magic**: 8 bytes, `"PIADINA\0"`.
 - **layout_version**: 32-bit unsigned integer.
@@ -86,9 +86,9 @@ The footer is a fixed-size binary structure, conceptually:
 - **archive_size**: 64-bit unsigned integer.
 - **archive_hash**: 32-byte hash (e.g. SHA-256) of the **archive bytes** as stored in the binary (tar+gzip).
 - **footer_hash**: 32-byte hash of the footer contents excluding this field (optional but recommended).
-- **reserved**: additional 12 bytes reserved for future expansion for a total of 64 bytes.
+- **reserved**: additional 20 bytes reserved for future expansion.
 
-The exact C struct used in `footer.h` is the normative definition of the footer layout. All multi-byte integer fields are encoded as little-endian values, tightly packed with no padding between fields. For layout version `1`, the 12 `reserved` bytes MUST be set to zero; future layout versions MAY reinterpret them (or extend the footer) for features such as signature references or other metadata, but MUST do so in a way that is clearly distinguished via the `layout_version` field. At runtime, Piadina:
+The exact C struct used in `footer.h` is the normative definition of the footer layout. All multi-byte integer fields are encoded as little-endian values, tightly packed with no padding between fields. For layout version `1`, the 20 `reserved` bytes MUST be set to zero; future layout versions MAY reinterpret them (or extend the footer) for features such as signature references or other metadata, but MUST do so in a way that is clearly distinguished via the `layout_version` field. At runtime, Piadina:
 
 - Seeks to `file_size - FOOTER_SIZE`.
 - Reads and validates the footer.
@@ -1156,6 +1156,12 @@ We need to be strict about memory to avoid leaks and use-after-free bugs.
 - **Error Handling**:
   - Use the `goto cleanup;` pattern. One exit point per function to guarantee resource release.
 
+- **Documentation**:
+  - Every public function MUST document ownership and lifetime expectations in its header comment:
+    - State explicitly which side allocates and which side frees any buffers or structs referenced by the API.
+    - When no allocation occurs, say so clearly so future readers know the lifecycle is purely caller-managed.
+  - Treat these comments as part of the contract; update them whenever ownership rules change.
+
 - **Tools**:
   - ASan (`-fsanitize=address`) in CI.
   - Valgrind for leak checks.
@@ -1184,8 +1190,9 @@ Planned development phases for Piadina and Azdora as a combined project. Each mi
        - Stubbed but compiling platform-specific `platform_get_self_exe_path()` for Linux (macOS/Windows can return clearly-marked “not yet implemented” errors).
      - Implement `common/footer.{c,h}`:
        - Define the footer struct matching §3.1.2.
-       - Implement functions to seek to, read, and validate the footer from an open file descriptor.
-       - Provide basic error codes (bad magic, bad layout version, short read, etc.).
+       - Provide helpers to append a footer when assembling binaries and to seek/read/validate it at runtime, ensuring metadata/archive ranges are sane for the current file size.
+       - Provide basic error codes (bad magic, bad layout version, short/failed IO, bad ranges, etc.).
+     - Expose a convenience initializer so callers (and tests) can prepare zeroed footer structs with the correct magic/version before filling offsets/sizes.
    - **Expected output**:
      - A small test program under `tests/unit/` can construct a fake file with a footer and successfully read/validate it.
    - **Testing**:
