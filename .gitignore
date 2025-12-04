@@ -62,5 +62,8 @@ Makefile
 /libarchive_musl
 /libarchive_glibc
 
+# Output files
+output.piadina
+
 # Editor / backup files
 *~

@@ -5,6 +5,18 @@
 #include <stddef.h>
 
 typedef enum {
+    METADATA_EXPECT_ANY = 0,
+    METADATA_EXPECT_STRING,
+    METADATA_EXPECT_UINT,
+    METADATA_EXPECT_BOOL,
+    METADATA_EXPECT_BYTES,
+    METADATA_EXPECT_ARRAY_STRING,
+    METADATA_EXPECT_MAP_STRING
+} metadata_core_expected_kind_t;
+
+#define METADATA_CORE_SCHEMA_VERSION 1
+
+typedef enum {
     METADATA_FIELD_VERSION = 0,
     METADATA_FIELD_APP_NAME,
     METADATA_FIELD_APP_VER,
@@ -78,5 +90,11 @@ const char *metadata_core_archive_format_default(void);
  * Default for the `VALIDATE` flag.
  */
 bool metadata_core_validate_default(void);
+
+/**
+ * Return the expected value kind for a well-known field. For unknown fields the
+ * expectation is METADATA_EXPECT_ANY. No allocations are performed.
+ */
+metadata_core_expected_kind_t metadata_core_expected_kind(metadata_core_field_t field);
 
 #endif /* PIADINA_COMMON_METADATA_CORE_H */

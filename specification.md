@@ -76,7 +76,7 @@ From beginning to end, the file is:
 
 ##### 3.1.2 Footer Structure (Conceptual)
 
-The footer is a fixed-size padded/tightly-packed to exactly **128 bytes**binary structure, conceptually:
+The footer is a fixed-size, tightly-packed **192-byte** binary structure:
 
 - **magic**: 8 bytes, `"PIADINA\0"`.
 - **layout_version**: 32-bit unsigned integer.
@@ -84,11 +84,12 @@ The footer is a fixed-size padded/tightly-packed to exactly **128 bytes**binary 
 - **metadata_size**: 64-bit unsigned integer.
 - **archive_offset**: 64-bit unsigned integer.
 - **archive_size**: 64-bit unsigned integer.
-- **archive_hash**: 32-byte hash (e.g. SHA-256) of the **archive bytes** as stored in the binary (tar+gzip).
-- **footer_hash**: 32-byte hash of the footer contents excluding this field (optional but recommended).
-- **reserved**: additional 20 bytes reserved for future expansion.
+- **metadata_hash**: 32-byte SHA-256 of the metadata block (as stored).
+- **archive_hash**: 32-byte SHA-256 of the archive bytes (tar+gzip).
+- **reserved**: 52 bytes, zeroed for layout version 1.
+- **footer_hash**: 32-byte SHA-256 of the footer with `footer_hash` zeroed.
 
-The exact C struct used in `footer.h` is the normative definition of the footer layout. All multi-byte integer fields are encoded as little-endian values, tightly packed with no padding between fields. For layout version `1`, the 20 `reserved` bytes MUST be set to zero; future layout versions MAY reinterpret them (or extend the footer) for features such as signature references or other metadata, but MUST do so in a way that is clearly distinguished via the `layout_version` field. At runtime, Piadina:
+The exact C struct used in `footer.h` is the normative definition of the footer layout. All multi-byte integer fields are encoded as little-endian values, tightly packed with no padding between fields. For layout version `1`, the 52 `reserved` bytes MUST be set to zero; future layout versions MAY reinterpret them (or extend the footer) for features such as signature references or other metadata, but MUST do so in a way that is clearly distinguished via the `layout_version` field. At runtime, Piadina:
 
 - Seeks to `file_size - FOOTER_SIZE`.
 - Reads and validates the footer.
@@ -225,6 +226,8 @@ Execution configuration:
 - **`"ENV"`**:
   - A map from text to text.
   - Specifies environment variables to add or override for the child process.
+  - Keys MUST also be shell-safe for export: after uppercasing, they must match
+    `[A-Za-z_][A-Za-z0-9_]*` (hyphens are not permitted).
 
 Extraction/cache configuration:
 
@@ -873,18 +876,13 @@ Piadina aims for **minimal external dependencies**:
 - **Compression**:
   - `zlib` (or a compatible gzip implementation) is required for handling the gzip-compressed archive.
   - The tar format handling itself will be implemented in-tree as a small, self-contained C module (no external tar/archive library).
-- **Cryptography and encoding**:
-  - `libcrypto` from OpenSSL (or an equivalent provider used by OTP) is required for:
-    - SHA-256 hashing (for `PAYLOAD_HASH` and `ARCHIVE_HASH`).
-    - Base64 encoding of any binary metadata exported into `.piadina_env`.
-  - For v0.1, Piadina and Azdora **do not** provide internal fallbacks for SHA-256 or Base64; they rely on the presence of `libcrypto`. Internal minimal implementations may be added in later versions, but are explicitly out of scope for this initial implementation.
 - A **minimal CBOR implementation** in C:
   - Implement only what is required by the metadata schema.
   - No external CBOR library if avoidable.
 
 Implementation note (non-normative, for early prototypes only):
 
-- For the **first implementation stage**, Piadina and Azdora deliberately use two specific external libraries to accelerate initial prototype delivery:
+- For the **first implementation stage**, Piadina and Azdora may use external libraries to accelerate initial prototype delivery:
   - `libarchive` (with gzip support) for tar+gzip handling.
   - `libcbor` for metadata encoding/decoding.
 - These libraries MUST be used in a way that preserves the on-disk formats defined in this specification and are always accessed via the internal abstraction layers.
@@ -909,7 +907,6 @@ Build system:
     - Detects compiler (`CC`), `CFLAGS`, `LDFLAGS`.
     - Detects availability of a musl toolchain (e.g. `musl-gcc`) and sets a feature macro (e.g. `HAVE_MUSL`).
     - Detects presence of static `zlib` (or equivalent) and sets `HAVE_ZLIB`.
-    - Detects presence of static `libcrypto` (or equivalent) and sets `HAVE_LIBCRYPTO`; for v0.1, both `HAVE_ZLIB` and `HAVE_LIBCRYPTO` are treated as **required** for building Piadina and Azdora.
     - Detects presence of static `libarchive` (or equivalent) and sets `HAVE_LIBARCHIVE`; for the initial prototype, this is treated as **required** unless a configure-time option explicitly disables the vendored/system tar backend.
     - Detects presence of static `libcbor` and sets `HAVE_LIBCBOR`; for the initial prototype this is also treated as **required**, with the option to fall back to an in-tree implementation in later milestones.
     - Determines host/target triple (CPU and OS), e.g. `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`.

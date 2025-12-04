@@ -225,6 +225,7 @@ int main(int argc, char **argv)
 
     /* Handle print-footer action */
     if (config.action == CONFIG_ACTION_PRINT_FOOTER) {
+        fprintf(stderr, "Footer Information:\n");
         footer_print(&footer, stderr);
         result = PIADINA_EXIT_SUCCESS;
         goto cleanup;

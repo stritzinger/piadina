@@ -14,4 +14,6 @@ libcommon_a_SOURCES = \
 	cbor_core.c \
 	cbor_core.h \
 	metadata_core.c \
-	metadata_core.h
+	metadata_core.h \
+	crypto.c \
+	crypto.h

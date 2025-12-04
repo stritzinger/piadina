@@ -150,17 +150,30 @@ void footer_print(const piadina_footer_t *footer, FILE *stream)
         stream = stderr;
     }
 
-    fprintf(stream, "Footer Information:\n");
     fprintf(stream, "  Layout version:    %u\n", footer->layout_version);
     fprintf(stream, "  Metadata offset:   %lu\n", (unsigned long)footer->metadata_offset);
     fprintf(stream, "  Metadata size:     %lu\n", (unsigned long)footer->metadata_size);
     fprintf(stream, "  Archive offset:    %lu\n", (unsigned long)footer->archive_offset);
     fprintf(stream, "  Archive size:      %lu\n", (unsigned long)footer->archive_size);
 
+    /* Metadata hash as hex */
+    fprintf(stream, "  Metadata hash:     ");
+    for (int i = 0; i < 32; i++) {
+        fprintf(stream, "%02x", footer->metadata_hash[i]);
+    }
+    fprintf(stream, "\n");
+
     /* Print archive hash as hex */
     fprintf(stream, "  Archive hash:      ");
     for (int i = 0; i < 32; i++) {
         fprintf(stream, "%02x", footer->archive_hash[i]);
+    }
+    fprintf(stream, "\n");
+
+    /* Footer hash as hex */
+    fprintf(stream, "  Footer hash:       ");
+    for (int i = 0; i < 32; i++) {
+        fprintf(stream, "%02x", footer->footer_hash[i]);
     }
     fprintf(stream, "\n");
 }

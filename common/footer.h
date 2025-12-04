@@ -6,7 +6,7 @@
 #define PIADINA_FOOTER_MAGIC "PIADINA\0"
 #define PIADINA_FOOTER_MAGIC_SIZE 8
 #define PIADINA_FOOTER_LAYOUT_VERSION 1
-#define PIADINA_FOOTER_SIZE 128
+#define PIADINA_FOOTER_SIZE 192
 
 typedef enum {
     FOOTER_OK = 0,
@@ -29,9 +29,10 @@ typedef struct __attribute__((packed)) {
     uint64_t metadata_size;
     uint64_t archive_offset;
     uint64_t archive_size;
+    uint8_t metadata_hash[32];
     uint8_t archive_hash[32];
+    uint8_t reserved[52];
     uint8_t footer_hash[32];
-    uint8_t reserved[20];
 } piadina_footer_t;
 
 _Static_assert(sizeof(piadina_footer_t) == PIADINA_FOOTER_SIZE, "Footer struct must be packed");

@@ -386,86 +386,100 @@ Mark items as you complete them.
 
 ### `azdora/config.{c,h}`
 
-- [ ] **Config structure**
-  - [ ] Define configuration struct with:
-    - [ ] Launcher path (`--launcher` / `-l`).
-    - [ ] Payload directory path (`--payload` / `-p`).
-    - [ ] Output file path (`--output` / `-o`).
-    - [ ] Collection of `--meta` / `-m` entries (as raw strings for now).
+- [x] **Config structure**
+  - [x] Define configuration struct with:
+    - [x] Launcher path (`--launcher` / `-l`).
+    - [x] Payload directory path (`--payload` / `-p`).
+    - [x] Output file path (`--output` / `-o`).
+    - [x] Collection of `--meta` / `-m` entries (as raw strings for now).
 
-- [ ] **CLI parsing**
-  - [ ] Implement parsing for:
-    - [ ] `--launcher FILE_PATH` / `-l`.
-    - [ ] `--payload DIR_PATH` / `-p`.
-    - [ ] `--output FILE_PATH` / `-o`.
-    - [ ] Repeated `--meta PATH=VALUE` / `-m PATH=VALUE`.
-  - [ ] Implement default naming behavior for output when `--output` is omitted (basic initial behavior is acceptable here).
+- [x] **CLI parsing**
+  - [x] Implement parsing for:
+    - [x] `--launcher FILE_PATH` / `-l`.
+    - [x] `--payload DIR_PATH` / `-p`.
+    - [x] `--output FILE_PATH` / `-o`.
+    - [x] Repeated `--meta PATH=VALUE` / `-m PATH=VALUE`.
+  - [x] Implement default naming behavior for output when `--output` is omitted (basic initial behavior is acceptable here).
 
 ### `azdora/metadata.{c,h}` (minimal)
 
-- [ ] **Metadata representation**
-  - [ ] Define a minimal metadata struct sufficient for:
-    - [ ] `VERSION`.
-    - [ ] `APP_NAME`.
-    - [ ] `APP_VER`.
-    - [ ] `ENTRY_POINT`.
-    - [ ] Placeholder hash fields.
+- [x] **Metadata representation**
+  - [x] Define a minimal metadata struct sufficient for:
+    - [x] `VERSION`.
+    - [x] `APP_NAME`.
+    - [x] `APP_VER`.
+    - [x] `ENTRY_POINT`.
+    - [x] Placeholder hash fields.
 
-- [ ] **Metadata construction**
-  - [ ] Implement functions to:
-    - [ ] Initialize metadata with default schema version.
-    - [ ] Apply parsed `--meta` entries (initial limited subset).
-    - [ ] Enforce that `VERSION` cannot be overridden by user input.
+- [x] **Metadata construction**
+  - [x] Implement functions to:
+    - [x] Initialize metadata with default schema version.
+    - [x] Apply parsed `--meta` entries (initial limited subset).
+    - [x] Enforce that `VERSION` cannot be overridden by user input.
 
 ### `azdora/cbor_encode.{c,h}` (minimal, via `libcbor`)
 
-- [ ] **Encoding minimal map**
-  - [ ] Implement functions that use `cbor_core` / `libcbor` to encode a top-level metadata map containing:
-    - [ ] `VERSION` (uint).
-    - [ ] `APP_NAME` (text, optional).
-    - [ ] `APP_VER` (text, optional).
-    - [ ] `ENTRY_POINT` (text, optional).
-    - [ ] Placeholder hashes, if desired at this stage.
+- [x] **Encoding minimal map**
+  - [x] Implement functions that use `cbor_core` / `libcbor` to encode a top-level metadata map containing:
+    - [x] `VERSION` (uint).
+    - [x] `APP_NAME` (text, optional).
+    - [x] `APP_VER` (text, optional).
+    - [x] `ENTRY_POINT` (text, optional).
+    - [x] Placeholder hashes, if desired at this stage.
 
 ### `azdora/assembler.{c,h}`
 
-- [ ] **Launcher + metadata + placeholder archive assembly**
-  - [ ] Read launcher binary from disk.
-  - [ ] Encode minimal metadata to CBOR using `cbor_encode`.
-  - [ ] Decide representation for a placeholder archive block (empty or fixed placeholder).
-  - [ ] Compute offsets and sizes:
-    - [ ] `launcher_size`.
-    - [ ] `metadata_offset` = `launcher_size`.
-    - [ ] `metadata_size`.
-    - [ ] `archive_offset` = `launcher_size + metadata_size`.
-    - [ ] `archive_size` (placeholder).
-  - [ ] Construct footer struct with:
-    - [ ] Fill offsets and sizes.
-    - [ ] Set `ARCHIVE_HASH` to placeholder or zero value for now.
-  - [ ] Write final layout to output file:
-    - [ ] Launcher bytes.
-    - [ ] Metadata block.
-    - [ ] Placeholder archive block.
-    - [ ] Footer.
+- [x] **Launcher + metadata + placeholder archive assembly**
+  - [x] Read launcher binary from disk.
+  - [x] Encode minimal metadata to CBOR using `cbor_encode`.
+  - [x] Decide representation for a placeholder archive block (empty or fixed placeholder).
+  - [x] Compute offsets and sizes:
+    - [x] `launcher_size`.
+    - [x] `metadata_offset` = `launcher_size`.
+    - [x] `metadata_size`.
+    - [x] `archive_offset` = `launcher_size + metadata_size`.
+    - [x] `archive_size` (placeholder).
+  - [x] Construct footer struct with:
+    - [x] Fill offsets and sizes.
+    - [x] Set `ARCHIVE_HASH` to placeholder or zero value for now.
+  - [x] Write final layout to output file:
+    - [x] Launcher bytes.
+    - [x] Metadata block.
+    - [x] Placeholder archive block.
+    - [x] Footer.
 
 ### Tests for milestone 6
 
-- [ ] **Unit tests for `azdora/config`**
-  - [ ] CLI parsing tests for each of `--launcher`, `--payload`, `--output`, `--meta`.
-  - [ ] Test error cases (missing required options).
+- [x] **Unit tests for `azdora/config`**
+  - [x] CLI parsing tests for each of `--launcher`, `--payload`, `--output`, `--meta`.
+  - [x] Test error cases (missing required options).
 
-- [ ] **Unit tests for `azdora/metadata`**
-  - [ ] Test `--meta` handling for minimal fields.
-  - [ ] Test rejection of attempts to override `VERSION`.
+- [x] **Unit tests for `azdora/metadata`**
+  - [x] Test `--meta` handling for minimal fields.
+  - [x] Test rejection of attempts to override `VERSION`.
 
-- [ ] **Unit tests for `azdora/cbor_encode`**
-  - [ ] Verify that encoded CBOR matches expectations from `cbor_core`.
+- [x] **Unit tests for `azdora/cbor_encode`**
+  - [x] Verify that encoded CBOR matches expectations from `cbor_core`.
 
-- [ ] **Integration test**
-  - [ ] Run Azdora on a test payload directory:
-    - [ ] Verify resulting binary layout:
-      - [ ] Footer can be read and validated using `footer_read`/`footer_validate`.
-      - [ ] CBOR metadata can be decoded by a simple reader or unit test.
+- [x] **Integration test**
+  - [x] Run Azdora on a test payload directory:
+    - [x] Verify resulting binary layout:
+      - [x] Footer can be read and validated using `footer_read`/`footer_validate`.
+      - [x] CBOR metadata can be decoded by a simple reader or unit test.
+
+---
+
+### Milestone 6.5 – Exported Function Documentation Consistency
+
+- [ ] **Define documentation style**
+  - [ ] Adopt a uniform Doxygen-style block for all exported functions across azdora, piadina, and common headers.
+  - [ ] Specify required fields per function comment: brief, ownership/lifetime notes, parameter descriptions, and return/value semantics (including error handling and caller cleanup).
+- [ ] **Apply documentation pass**
+  - [ ] Update exported functions in azdora (metadata, assembler, config, cbor encoder) to the agreed style.
+  - [ ] Update exported functions in common (cbor_core, metadata_core, footer, log, platform) to the same style.
+  - [ ] Update exported functions in piadina headers as applicable.
+- [ ] **Clarify specification**
+  - [ ] Amend `specification.md` to state the chosen documentation style and the expectation that all exported APIs include ownership/cleanup details.
 
 ---
 

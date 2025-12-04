@@ -8,24 +8,25 @@ typedef struct {
     metadata_core_field_t field;
     bool required;
     const char *default_literal;
+    metadata_core_expected_kind_t expect_kind;
 } metadata_field_descriptor_t;
 
 static const metadata_field_descriptor_t kFieldTable[] = {
-    {"VERSION", METADATA_FIELD_VERSION, true, NULL},
-    {"APP_NAME", METADATA_FIELD_APP_NAME, false, NULL},
-    {"APP_VER", METADATA_FIELD_APP_VER, false, NULL},
-    {"ARCHIVE_HASH", METADATA_FIELD_ARCHIVE_HASH, true, NULL},
-    {"ARCHIVE_FORMAT", METADATA_FIELD_ARCHIVE_FORMAT, false, "tar+gzip"},
-    {"PAYLOAD_HASH", METADATA_FIELD_PAYLOAD_HASH, true, NULL},
-    {"ENTRY_POINT", METADATA_FIELD_ENTRY_POINT, true, NULL},
-    {"ENTRY_ARGS", METADATA_FIELD_ENTRY_ARGS, false, NULL},
-    {"ENTRY_ARGS_POST", METADATA_FIELD_ENTRY_ARGS_POST, false, NULL},
-    {"CACHE_ROOT", METADATA_FIELD_CACHE_ROOT, false, "{HOME}/.piadina/cache"},
-    {"PAYLOAD_ROOT", METADATA_FIELD_PAYLOAD_ROOT, false, "{CACHE_ROOT}/{PAYLOAD_HASH}"},
-    {"CLEANUP_POLICY", METADATA_FIELD_CLEANUP_POLICY, false, "oncrash"},
-    {"VALIDATE", METADATA_FIELD_VALIDATE, false, "false"},
-    {"LOG_LEVEL", METADATA_FIELD_LOG_LEVEL, false, "info"},
-    {"ENV", METADATA_FIELD_ENV, false, NULL},
+    {"VERSION", METADATA_FIELD_VERSION, true, NULL, METADATA_EXPECT_UINT},
+    {"APP_NAME", METADATA_FIELD_APP_NAME, false, NULL, METADATA_EXPECT_STRING},
+    {"APP_VER", METADATA_FIELD_APP_VER, false, NULL, METADATA_EXPECT_STRING},
+    {"ARCHIVE_HASH", METADATA_FIELD_ARCHIVE_HASH, true, NULL, METADATA_EXPECT_BYTES},
+    {"ARCHIVE_FORMAT", METADATA_FIELD_ARCHIVE_FORMAT, false, "tar+gzip", METADATA_EXPECT_STRING},
+    {"PAYLOAD_HASH", METADATA_FIELD_PAYLOAD_HASH, true, NULL, METADATA_EXPECT_BYTES},
+    {"ENTRY_POINT", METADATA_FIELD_ENTRY_POINT, true, NULL, METADATA_EXPECT_STRING},
+    {"ENTRY_ARGS", METADATA_FIELD_ENTRY_ARGS, false, NULL, METADATA_EXPECT_ARRAY_STRING},
+    {"ENTRY_ARGS_POST", METADATA_FIELD_ENTRY_ARGS_POST, false, NULL, METADATA_EXPECT_ARRAY_STRING},
+    {"CACHE_ROOT", METADATA_FIELD_CACHE_ROOT, false, "{HOME}/.piadina/cache", METADATA_EXPECT_STRING},
+    {"PAYLOAD_ROOT", METADATA_FIELD_PAYLOAD_ROOT, false, "{CACHE_ROOT}/{PAYLOAD_HASH}", METADATA_EXPECT_STRING},
+    {"CLEANUP_POLICY", METADATA_FIELD_CLEANUP_POLICY, false, "oncrash", METADATA_EXPECT_STRING},
+    {"VALIDATE", METADATA_FIELD_VALIDATE, false, "false", METADATA_EXPECT_BOOL},
+    {"LOG_LEVEL", METADATA_FIELD_LOG_LEVEL, false, "info", METADATA_EXPECT_STRING},
+    {"ENV", METADATA_FIELD_ENV, false, NULL, METADATA_EXPECT_MAP_STRING},
 };
 
 _Static_assert(sizeof(kFieldTable) / sizeof(kFieldTable[0]) == METADATA_FIELD_UNKNOWN,
@@ -98,6 +99,14 @@ const char *metadata_core_field_default_string(metadata_core_field_t field)
         return NULL;
     }
     return kFieldTable[field].default_literal;
+}
+
+metadata_core_expected_kind_t metadata_core_expected_kind(metadata_core_field_t field)
+{
+    if (field < 0 || field >= METADATA_FIELD_UNKNOWN) {
+        return METADATA_EXPECT_ANY;
+    }
+    return kFieldTable[field].expect_kind;
 }
 
 metadata_core_cleanup_policy_t metadata_core_cleanup_policy_from_string(const char *value)
