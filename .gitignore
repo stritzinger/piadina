@@ -54,5 +54,9 @@ Makefile
 # Dist tarballs
 /*.tar.gz
 
+# Optional dependencies directories
+/libcbor
+/libarchive
+
 # Editor / backup files
 *~

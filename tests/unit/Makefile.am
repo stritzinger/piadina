@@ -1,6 +1,9 @@
-AM_CPPFLAGS = -I$(top_srcdir)/tests/unity -I$(top_builddir) -I$(top_srcdir)/common
+AM_CPPFLAGS = -I$(top_srcdir)/tests/unity -I$(top_builddir) -I$(top_srcdir)/common \
+	$(CBOR_CPPFLAGS) $(ARCHIVE_CPPFLAGS)
 
-LDADD = $(top_builddir)/common/libcommon.a
+AM_CFLAGS = $(DEBUG_CFLAGS) $(STATIC_CFLAGS)
+AM_LDFLAGS = $(DEBUG_LDFLAGS) $(STATIC_LDFLAGS) $(CBOR_LDFLAGS) $(ARCHIVE_LDFLAGS)
+LDADD = $(top_builddir)/common/libcommon.a $(CBOR_LIBS) $(ARCHIVE_LIBS)
 
 check_PROGRAMS = \
 	test_smoke \

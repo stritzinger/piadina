@@ -12,12 +12,188 @@ Both executables are built through the same Autotools project.
   - `libtool` (pulled in automatically on most systems)
 - Standard C compiler toolchain (e.g. `gcc`, `clang`)
 
-On Debian/Ubuntu the packages can be installed with:
+#### Required Packages
+
+On Debian/Ubuntu, install the following:
 
 ```sh
 sudo apt update
-sudo apt install autoconf automake libtool build-essential
+sudo apt install autoconf automake libtool build-essential \
+    libcbor-dev libarchive-dev
 ```
+
+#### Optional Packages (for Portable Static Builds)
+
+For maximum portability, you can use musl libc instead of glibc. When musl
+tooling is installed, `configure` will automatically detect and use it for
+static builds:
+
+```sh
+sudo apt install musl-dev musl-tools
+```
+
+### Static vs Dynamic Builds
+
+By default, `configure` attempts to produce **fully static binaries** that are
+self-contained and do not depend on system shared libraries. This makes the
+binaries portable across different Linux systems.
+
+#### Static Build Behavior
+
+When `--disable-static-build` is **not** specified (the default):
+
+1. `configure` checks if `musl-gcc` is available
+2. If found, it automatically uses musl for maximum portability
+3. It looks for static libraries in local directories first, then system paths
+4. If any static library is missing, `configure` fails with helpful guidance
+
+#### Static Build Requirements
+
+For static builds, you need static versions of the following libraries:
+
+- **libc** (static): Usually `libc6-dev` on glibc systems, or `musl-dev` for
+  musl-based builds (recommended).
+- **libcbor** (static): The static library `libcbor.a` is required.
+- **libarchive** (static): The static library `libarchive.a` is required.
+
+#### Building Libraries Locally (Recommended)
+
+Many Linux distributions only ship shared libraries (`.so`) for libcbor and
+libarchive. Instead of installing static versions system-wide, you can build
+them locally inside the project directory. The `configure` script will
+automatically detect and use them.
+
+> **⚠️ Important: musl auto-detection**
+>
+> If `musl-gcc` is installed on your system, it will be **used by default** for
+> static builds (for maximum portability). This means the libraries below
+> **must be built with `CC=musl-gcc`** or the build will fail.
+>
+> To check if musl is installed: `which musl-gcc`
+>
+> To explicitly disable musl and use glibc: `./configure --without-musl`
+
+**Building libcbor locally:**
+
+```sh
+# From the piadina project root
+git clone https://github.com/PJK/libcbor.git
+cd libcbor
+
+# If musl-gcc is installed (recommended for portable binaries):
+# Note: CMAKE_C_COMPILER_AR/RANLIB must be set as musl-gcc doesn't provide them
+CC=musl-gcc cmake -B _build \
+    -DCMAKE_C_COMPILER_AR=/usr/bin/ar \
+    -DCMAKE_C_COMPILER_RANLIB=/usr/bin/ranlib \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DWITH_TESTS=OFF
+
+# Or without musl (use --without-musl when configuring piadina):
+# cmake -B _build -DBUILD_SHARED_LIBS=OFF -DWITH_TESTS=OFF
+
+cmake --build _build -j$(nproc)
+cd ..
+```
+
+**Building libarchive locally:**
+
+Note: libarchive has a `build/` directory in its source tree, so we use `_build` instead.
+
+```sh
+# From the piadina project root
+git clone https://github.com/libarchive/libarchive.git
+cd libarchive
+
+# If musl-gcc is installed (recommended for portable binaries):
+# Note: CMAKE_C_COMPILER_AR/RANLIB must be set as musl-gcc doesn't provide them
+CC=musl-gcc cmake -B _build \
+    -DCMAKE_C_COMPILER_AR=/usr/bin/ar \
+    -DCMAKE_C_COMPILER_RANLIB=/usr/bin/ranlib \
+    -DENABLE_TEST=OFF \
+    -DENABLE_OPENSSL=OFF \
+    -DENABLE_ZLIB=OFF \
+    -DENABLE_BZip2=OFF \
+    -DENABLE_LZMA=OFF \
+    -DENABLE_ZSTD=OFF \
+    -DENABLE_LZ4=OFF \
+    -DENABLE_EXPAT=OFF \
+    -DENABLE_ICONV=OFF \
+    -DPOSIX_REGEX_LIB=NONE \
+    -DENABLE_LIBB2=OFF \
+    -DENABLE_LIBXML2=OFF
+
+# Or without musl (use --without-musl when configuring piadina):
+# cmake -B _build \
+#     -DENABLE_TEST=OFF \
+#     -DENABLE_OPENSSL=OFF \
+#     -DENABLE_ZLIB=OFF \
+#     -DENABLE_BZip2=OFF \
+#     -DENABLE_LZMA=OFF \
+#     -DENABLE_ZSTD=OFF \
+#     -DENABLE_LZ4=OFF \
+#     -DENABLE_EXPAT=OFF \
+#     -DENABLE_ICONV=OFF \
+#     -DPOSIX_REGEX_LIB=NONE \
+#     -DENABLE_LIBB2=OFF \
+#     -DENABLE_LIBXML2=OFF
+
+cmake --build _build -j$(nproc)
+cd ..
+```
+
+After building both libraries, `configure` will automatically find them:
+
+```sh
+./configure
+# Output will show:
+#   Local libcbor:      yes
+#   Local libarchive:   yes
+```
+
+The local library directories are expected to have one of these layouts:
+
+- **Build tree layout** (after `cmake --build build`):
+  - `libcbor/src/cbor.h` + `libcbor/build/src/libcbor.a`
+  - `libarchive/libarchive/archive.h` + `libarchive/build/libarchive/libarchive.a`
+
+- **Install layout** (after `cmake --install` with `--prefix`):
+  - `libcbor/include/cbor.h` + `libcbor/lib/libcbor.a`
+  - `libarchive/include/archive.h` + `libarchive/lib/libarchive.a`
+
+#### Installing Libraries System-Wide (Alternative)
+
+If you prefer to install the static libraries system-wide:
+
+**Building and installing libcbor:**
+
+```sh
+git clone https://github.com/PJK/libcbor.git
+cd libcbor
+cmake -B build -DCMAKE_C_FLAGS="-fPIC" -DBUILD_SHARED_LIBS=OFF -DWITH_TESTS=OFF
+cmake --build build
+sudo cmake --install build
+```
+
+**Building and installing libarchive:**
+
+```sh
+git clone https://github.com/libarchive/libarchive.git
+cd libarchive
+cmake -B build -DCMAKE_C_FLAGS="-fPIC" -DENABLE_OPENSSL=OFF -DENABLE_TEST=OFF
+cmake --build build -j$(nproc)
+sudo cmake --install build
+```
+
+#### Dynamic Builds
+
+If static libraries are not available, you can fall back to dynamic linking:
+
+```sh
+./configure --disable-static-build
+make
+```
+
+This produces binaries that depend on system shared libraries at runtime.
 
 ### Bootstrap, Configure, Build
 
@@ -38,7 +214,17 @@ From the repository root:
    ./configure
    ```
 
-   Add flags such as `--prefix`, `CC`, `CFLAGS`, etc., as needed.
+   Common options:
+
+   - `--disable-static-build`: Build dynamically linked binaries
+   - `--with-musl`: Force use of musl-gcc (error if not found)
+   - `--without-musl`: Do not use musl-gcc even if available
+   - `--prefix=PATH`: Set installation prefix
+   - `CC=compiler`: Override C compiler (e.g., `CC=clang`)
+   - `CFLAGS=flags`: Pass custom compiler flags
+
+   **Note**: When musl-gcc is detected and static builds are enabled, it is
+   used automatically. Use `--without-musl` to build with glibc instead.
 
 3. **Build**
 
@@ -54,16 +240,88 @@ From the repository root:
    make check
    ```
 
-   This executes the Unity-based unit tests and the shell integration test that
-   ensures both binaries launch.
+   This executes the Unity-based unit tests and integration tests. For static
+   builds, it also verifies that the binaries are indeed statically linked.
 
-5. **Install (optional)**
+5. **Verify static linkage (optional)**
+
+   ```sh
+   ldd piadina/piadina
+   ```
+
+   For a statically linked binary, this should report "not a dynamic executable".
+
+6. **Install (optional)**
 
    ```sh
    make install
    ```
 
    Use `DESTDIR` or `--prefix` to control the installation target.
+
+### Build Troubleshooting
+
+#### "libcbor headers not found"
+
+Install the development package or build locally:
+
+```sh
+# Option 1: Install system package (for dynamic builds)
+sudo apt install libcbor-dev
+
+# Option 2: Build locally (for static builds)
+git clone https://github.com/PJK/libcbor.git
+cd libcbor && cmake -B build -DBUILD_SHARED_LIBS=OFF -DWITH_TESTS=OFF && cmake --build build
+```
+
+#### "libarchive headers not found"
+
+Install the development package or build locally:
+
+```sh
+# Option 1: Install system package (for dynamic builds)
+sudo apt install libarchive-dev
+
+# Option 2: Build locally (for static builds)
+git clone https://github.com/libarchive/libarchive.git
+cd libarchive && cmake -B build -DENABLE_OPENSSL=OFF -DENABLE_TEST=OFF && cmake --build build -j$(nproc)
+```
+
+#### "static libcbor library is not available"
+
+This error means configure found the libcbor headers but not the static library
+(`libcbor.a`). Solutions:
+
+1. Build libcbor locally in the `libcbor/` directory (see above)
+2. Install a static version system-wide
+3. Use `--disable-static-build` for a dynamic build
+
+#### "static libarchive library is not available"
+
+This error means configure found the libarchive headers but not the static
+library (`libarchive.a`). Solutions:
+
+1. Build libarchive locally in the `libarchive/` directory (see above)
+2. Install a static version system-wide
+3. Use `--disable-static-build` for a dynamic build
+
+#### "static libc is not available"
+
+This typically means the static C library is not installed. On Debian/Ubuntu:
+
+```sh
+sudo apt install libc6-dev
+```
+
+For musl-based builds (recommended), install `musl-dev`.
+
+#### "musl-gcc not found" (when using --with-musl)
+
+Install the musl tools:
+
+```sh
+sudo apt install musl-dev musl-tools
+```
 
 ### Cleaning Up
 

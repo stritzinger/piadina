@@ -280,23 +280,33 @@ Mark items as you complete them.
 
 ### Configure / Toolchain detection
 
-- [ ] **Static-by-default**
-  - [ ] Make static builds the default: `configure` should attempt to produce fully static binaries (musl or glibc `-static`) without extra flags.
-  - [ ] Add `--disable-static-build` for situations where developers need dynamic binaries.
+- [x] **Static-by-default**
+  - [x] Make static builds the default: `configure` should attempt to produce fully static binaries (musl or glibc `-static`) without extra flags.
+  - [x] Add `--disable-static-build` for situations where developers need dynamic binaries.
 
-- [ ] **Dependency verification**
-  - [ ] During `configure`, detect whether static variants of required libraries (`libc`, `libcbor`, `libarchive`, `libz`, etc.) are available; fail early with a clear error if any are missing.
+- [x] **Dependency verification**
+  - [x] During `configure`, detect whether static variants of required libraries (`libc`, `libcbor`, `libarchive`, `libz`, etc.) are available; fail early with a clear error if any are missing.
+
+- [x] **Musl toolchain support**
+  - [x] Auto-detect `musl-gcc` and use it by default for static builds when available.
+  - [x] Add `--with-musl` option to force musl usage (error if not available).
+  - [x] Add `--without-musl` option to disable musl even when available.
 
 ### Linking + docs
 
-- [ ] **Static linkage plumbing**
-  - [ ] When the static flag is enabled, ensure both `piadina` and `azdora` pass `-static` (or equivalent) and link against the static archives.
-  - [ ] Update the README/developer notes describing how to perform a static build locally and what prerequisites (musl toolchain, static libs) are needed.
+- [x] **Static linkage plumbing**
+  - [x] When the static flag is enabled, ensure both `piadina` and `azdora` pass `-static` (or equivalent) and link against the static archives.
+  - [x] Update the README/developer notes describing how to perform a static build locally and what prerequisites (musl toolchain, static libs) are needed.
+
+- [x] **Package requirements documentation**
+  - [x] Document required packages: `libcbor-dev`, `libarchive-dev`.
+  - [x] Document optional packages for portable builds: `musl-dev`, `musl-tools`.
+  - [x] Add troubleshooting section for common build errors.
 
 ### Validation
 
-- [ ] **CI/test hook**
-  - [ ] Add a scripted test (can be optional) that runs the default (static) build (`./configure && make && make check`) and asserts `ldd piadina/piadina` and `ldd azdora/azdora` report “not a dynamic executable”.
+- [x] **CI/test hook**
+  - [x] Add a scripted test (can be optional) that runs the default (static) build (`./configure && make && make check`) and asserts `ldd piadina/piadina` and `ldd azdora/azdora` report "not a dynamic executable".
 
 ---
 

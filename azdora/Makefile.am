@@ -1,4 +1,6 @@
 bin_PROGRAMS = azdora
 azdora_SOURCES = main.c
-azdora_CPPFLAGS = -I$(top_builddir) -I$(top_srcdir)
-azdora_CFLAGS = $(AM_CFLAGS)
+azdora_CPPFLAGS = -I$(top_builddir) -I$(top_srcdir) $(CBOR_CPPFLAGS) $(ARCHIVE_CPPFLAGS)
+azdora_CFLAGS = $(DEBUG_CFLAGS) $(STATIC_CFLAGS)
+azdora_LDFLAGS = $(DEBUG_LDFLAGS) $(STATIC_LDFLAGS) $(CBOR_LDFLAGS) $(ARCHIVE_LDFLAGS)
+azdora_LDADD = $(CBOR_LIBS) $(ARCHIVE_LIBS)
