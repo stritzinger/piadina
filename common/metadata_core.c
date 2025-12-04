@@ -42,18 +42,6 @@ static const cleanup_policy_entry_t kCleanupPolicies[] = {
     {"always", METADATA_CLEANUP_ALWAYS},
 };
 
-typedef struct {
-    const char *name;
-    metadata_core_log_level_t value;
-} log_level_entry_t;
-
-static const log_level_entry_t kLogLevels[] = {
-    {"debug", METADATA_LOG_DEBUG},
-    {"info", METADATA_LOG_INFO},
-    {"warn", METADATA_LOG_WARN},
-    {"error", METADATA_LOG_ERROR},
-};
-
 bool metadata_core_identifier_valid(const char *key, size_t len)
 {
     if (!key || len == 0) {
@@ -138,34 +126,6 @@ const char *metadata_core_cleanup_policy_to_string(metadata_core_cleanup_policy_
 metadata_core_cleanup_policy_t metadata_core_cleanup_policy_default(void)
 {
     return METADATA_CLEANUP_ONCRASH;
-}
-
-metadata_core_log_level_t metadata_core_log_level_from_string(const char *value)
-{
-    if (!value) {
-        return METADATA_LOG_INVALID;
-    }
-    for (size_t i = 0; i < sizeof(kLogLevels) / sizeof(kLogLevels[0]); ++i) {
-        if (strcmp(kLogLevels[i].name, value) == 0) {
-            return kLogLevels[i].value;
-        }
-    }
-    return METADATA_LOG_INVALID;
-}
-
-const char *metadata_core_log_level_to_string(metadata_core_log_level_t level)
-{
-    for (size_t i = 0; i < sizeof(kLogLevels) / sizeof(kLogLevels[0]); ++i) {
-        if (kLogLevels[i].value == level) {
-            return kLogLevels[i].name;
-        }
-    }
-    return NULL;
-}
-
-metadata_core_log_level_t metadata_core_log_level_default(void)
-{
-    return METADATA_LOG_INFO;
 }
 
 bool metadata_core_archive_format_supported(const char *value)

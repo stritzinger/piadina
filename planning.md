@@ -314,71 +314,71 @@ Mark items as you complete them.
 
 ### `piadina/config.{c,h}`
 
-- [ ] **Config structure definition**
-  - [ ] Define `struct piadina_config` including:
-    - [ ] Cache root override.
-    - [ ] Cleanup policy override.
-    - [ ] Validate flag override.
-    - [ ] Force-extract flag override.
-    - [ ] Log level override.
-    - [ ] Other launcher-specific flags (`print-metadata`, `print-footer`, `help`, `version`).
-    - [ ] Collection of non-launcher arguments (application args after `--`).
+- [x] **Config structure definition**
+  - [x] Define `struct piadina_config` including:
+    - [x] Cache root override.
+    - [x] Cleanup policy override.
+    - [x] Validate flag override.
+    - [x] Force-extract flag override.
+    - [x] Log level override.
+    - [x] Other launcher-specific flags (`print-metadata`, `print-footer`, `help`, `version`).
+    - [x] Collection of non-launcher arguments (application args after `--`).
 
-- [ ] **CLI parsing**
-  - [ ] Implement parser for `--launcher-*` options:
-    - [ ] `--launcher-cache-root=PATH`.
-    - [ ] `--launcher-cleanup=never|oncrash|always`.
-    - [ ] `--launcher-validate[=true|false]`.
-    - [ ] `--launcher-force-extract[=true|false]`.
-    - [ ] `--launcher-log-level=debug|info|warn|error`.
-    - [ ] `--launcher-verbose`.
-    - [ ] `--launcher-print-metadata`.
-    - [ ] `--launcher-print-footer`.
-    - [ ] `--launcher-help`.
-    - [ ] `--launcher-version`.
-  - [ ] Support both `--opt=value` and `--opt value` forms.
-  - [ ] Implement `--` separator handling:
-    - [ ] All arguments after `--` stored as application arguments, not parsed as launcher options.
+- [x] **CLI parsing**
+  - [x] Implement parser for `--launcher-*` options:
+    - [x] `--launcher-cache-root=PATH`.
+    - [x] `--launcher-cleanup=never|oncrash|always`.
+    - [x] `--launcher-validate[=true|false]`.
+    - [x] `--launcher-force-extract[=true|false]`.
+    - [x] `--launcher-log-level=debug|info|warn|error`.
+    - [x] `--launcher-verbose`.
+    - [x] `--launcher-print-metadata`.
+    - [x] `--launcher-print-footer`.
+    - [x] `--launcher-help`.
+    - [x] `--launcher-version`.
+  - [x] Support both `--opt=value` and `--opt value` forms.
+  - [x] Implement `--` separator handling:
+    - [x] All arguments after `--` stored as application arguments, not parsed as launcher options.
 
-- [ ] **Environment variable parsing**
-  - [ ] Read `PIADINA_CACHE_ROOT`, `PIADINA_CLEANUP_POLICY`, `PIADINA_VALIDATE`,
+- [x] **Environment variable parsing**
+  - [x] Read `PIADINA_CACHE_ROOT`, `PIADINA_CLEANUP_POLICY`, `PIADINA_VALIDATE`,
     `PIADINA_FORCE_EXTRACT`, `PIADINA_LOG_LEVEL`.
-  - [ ] Map environment values to the same internal representation as CLI.
+  - [x] Map environment values to the same internal representation as CLI.
 
-- [ ] **Precedence rules**
-  - [ ] Implement logic: CLI overrides env, env overrides hard-coded defaults.
+- [x] **Precedence rules**
+  - [x] Implement logic: CLI overrides env, env overrides hard-coded defaults.
 
 ### `piadina/main.c` (extended)
 
-- [ ] **Self path resolution and footer handling**
-  - [ ] Use `platform_get_self_exe_path()` to determine launcher path.
-  - [ ] Open the executable file for reading.
-  - [ ] Use `footer_read()` and `footer_validate()` to:
-    - [ ] Read footer from the executable.
-    - [ ] Fail with internal error code (112) on invalid or missing footer.
+- [x] **Self path resolution and footer handling**
+  - [x] Use `platform_get_self_exe_path()` to determine launcher path.
+  - [x] Open the executable file for reading.
+  - [x] Use `footer_read()` and `footer_validate()` to:
+    - [x] Read footer from the executable.
+    - [x] Fail with internal error code (112) on invalid or missing footer.
 
-- [ ] **Temporary process launch (no tar/metadata yet)**
-  - [ ] Define a test configuration with hard-coded `ENTRY_POINT` (e.g. `/bin/echo`) and arguments.
-  - [ ] Implement a minimal `process` helper (or inline logic) to:
-    - [ ] `fork` + `execve` `/bin/echo` with test arguments.
-    - [ ] Return child exit status as launcher exit code.
+- [x] **Temporary process launch (no tar/metadata yet)**
+  - [x] Define a test configuration with hard-coded `ENTRY_POINT` (e.g. `/bin/echo`) and arguments.
+  - [x] Implement a minimal `process` helper (or inline logic) to:
+    - [x] `fork` + `execve` `/bin/echo` with test arguments.
+    - [x] Return child exit status as launcher exit code.
 
 ### Tests for milestone 5
 
-- [ ] **Unit tests for `piadina/config`**
-  - [ ] Test various combinations of CLI options and environment variables for correct precedence.
-  - [ ] Test `--` separation behavior.
-  - [ ] Test boolean parsing for `--launcher-validate` / `PIADINA_VALIDATE`.
+- [x] **Unit tests for `piadina/config`**
+  - [x] Test various combinations of CLI options and environment variables for correct precedence.
+  - [x] Test `--` separation behavior.
+  - [x] Test boolean parsing for `--launcher-validate` / `PIADINA_VALIDATE`.
 
-- [ ] **Unit / integration tests for `process` or `main`**
-  - [ ] Test successful execution of `/bin/echo` and exit-code forwarding.
-  - [ ] Test behavior when `execve` fails (e.g. non-existent program) → launcher returns `115`.
-  - [ ] Integration test:
-    - [ ] Construct a test binary with a valid footer and run it.
-    - [ ] Verify:
-      - [ ] Footer is read.
-      - [ ] `/bin/echo` is invoked.
-      - [ ] Launcher exit status matches child exit status.
+- [x] **Unit / integration tests for `process` or `main`**
+  - [x] Test successful execution of `/bin/echo` and exit-code forwarding.
+  - [x] Test behavior when `execve` fails (e.g. non-existent program) → launcher returns `115`.
+  - [x] Integration test:
+    - [x] Construct a test binary with a valid footer and run it.
+    - [x] Verify:
+      - [x] Footer is read.
+      - [x] `/bin/echo` is invoked.
+      - [x] Launcher exit status matches child exit status.
 
 ---
 

@@ -66,11 +66,29 @@ static void test_log_emits_debug_when_enabled(void)
     fclose(stream);
 }
 
+static void test_log_level_from_string(void)
+{
+    TEST_ASSERT_EQUAL(LOG_LEVEL_DEBUG, log_level_from_string("debug"));
+    TEST_ASSERT_EQUAL(LOG_LEVEL_INFO, log_level_from_string("info"));
+    TEST_ASSERT_EQUAL(LOG_LEVEL_WARN, log_level_from_string("warn"));
+    TEST_ASSERT_EQUAL(LOG_LEVEL_ERROR, log_level_from_string("error"));
+    TEST_ASSERT_EQUAL(LOG_LEVEL_INVALID, log_level_from_string("verbose"));
+    TEST_ASSERT_EQUAL(LOG_LEVEL_INVALID, log_level_from_string(NULL));
+    TEST_ASSERT_EQUAL(LOG_LEVEL_INVALID, log_level_from_string(""));
+}
+
+static void test_log_level_default(void)
+{
+    TEST_ASSERT_EQUAL(LOG_LEVEL_INFO, log_level_default());
+}
+
 int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_log_default_level_is_info);
     RUN_TEST(test_log_filters_below_level);
     RUN_TEST(test_log_emits_debug_when_enabled);
+    RUN_TEST(test_log_level_from_string);
+    RUN_TEST(test_log_level_default);
     return UNITY_END();
 }

@@ -2,6 +2,7 @@
 
 #include <errno.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -138,6 +139,30 @@ void footer_prepare(piadina_footer_t *footer)
     memset(footer, 0, sizeof(*footer));
     memcpy(footer->magic, PIADINA_FOOTER_MAGIC, PIADINA_FOOTER_MAGIC_SIZE);
     footer->layout_version = PIADINA_FOOTER_LAYOUT_VERSION;
+}
+
+void footer_print(const piadina_footer_t *footer, FILE *stream)
+{
+    if (!footer) {
+        return;
+    }
+    if (!stream) {
+        stream = stderr;
+    }
+
+    fprintf(stream, "Footer Information:\n");
+    fprintf(stream, "  Layout version:    %u\n", footer->layout_version);
+    fprintf(stream, "  Metadata offset:   %lu\n", (unsigned long)footer->metadata_offset);
+    fprintf(stream, "  Metadata size:     %lu\n", (unsigned long)footer->metadata_size);
+    fprintf(stream, "  Archive offset:    %lu\n", (unsigned long)footer->archive_offset);
+    fprintf(stream, "  Archive size:      %lu\n", (unsigned long)footer->archive_size);
+
+    /* Print archive hash as hex */
+    fprintf(stream, "  Archive hash:      ");
+    for (int i = 0; i < 32; i++) {
+        fprintf(stream, "%02x", footer->archive_hash[i]);
+    }
+    fprintf(stream, "\n");
 }
 
 /* Internal Functions */

@@ -7,7 +7,8 @@ typedef enum {
     LOG_LEVEL_DEBUG = 0,
     LOG_LEVEL_INFO,
     LOG_LEVEL_WARN,
-    LOG_LEVEL_ERROR
+    LOG_LEVEL_ERROR,
+    LOG_LEVEL_INVALID  /* Sentinel for parsing errors */
 } log_level_t;
 
 /**
@@ -44,5 +45,17 @@ void log_log(log_level_t level, const char *fmt, ...) __attribute__((format(prin
 #define log_error(...) log_log(LOG_LEVEL_ERROR, __VA_ARGS__)
 
 const char *log_level_to_string(log_level_t level);
+
+/**
+ * Parse a log level from a string value.
+ * Returns LOG_LEVEL_INVALID if the value is not recognized.
+ * Accepts: "debug", "info", "warn", "error" (case-sensitive).
+ */
+log_level_t log_level_from_string(const char *value);
+
+/**
+ * Return the default log level (LOG_LEVEL_INFO).
+ */
+log_level_t log_level_default(void);
 
 #endif /* PIADINA_COMMON_LOG_H */

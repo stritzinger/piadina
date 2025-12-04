@@ -40,17 +40,6 @@ static void test_cleanup_policy_helpers(void)
                              metadata_core_cleanup_policy_to_string(METADATA_CLEANUP_ONCRASH));
 }
 
-static void test_log_level_helpers(void)
-{
-    TEST_ASSERT_EQUAL(METADATA_LOG_INFO, metadata_core_log_level_default());
-    TEST_ASSERT_EQUAL(METADATA_LOG_DEBUG,
-                      metadata_core_log_level_from_string("debug"));
-    TEST_ASSERT_EQUAL(METADATA_LOG_INVALID,
-                      metadata_core_log_level_from_string("verbose"));
-    TEST_ASSERT_EQUAL_STRING("warn",
-                             metadata_core_log_level_to_string(METADATA_LOG_WARN));
-}
-
 static void test_archive_defaults(void)
 {
     TEST_ASSERT_TRUE(metadata_core_archive_format_supported("tar+gzip"));
@@ -85,7 +74,6 @@ int main(void)
     RUN_TEST(test_identifier_validation);
     RUN_TEST(test_field_lookup_and_required);
     RUN_TEST(test_cleanup_policy_helpers);
-    RUN_TEST(test_log_level_helpers);
     RUN_TEST(test_archive_defaults);
     RUN_TEST(test_field_default_strings);
     return UNITY_END();

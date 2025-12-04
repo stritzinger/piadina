@@ -1,5 +1,5 @@
 AM_CPPFLAGS = -I$(top_srcdir)/tests/unity -I$(top_builddir) -I$(top_srcdir)/common \
-	$(CBOR_CPPFLAGS) $(ARCHIVE_CPPFLAGS)
+	-I$(top_srcdir) $(CBOR_CPPFLAGS) $(ARCHIVE_CPPFLAGS)
 
 AM_CFLAGS = $(DEBUG_CFLAGS) $(STATIC_CFLAGS)
 AM_LDFLAGS = $(DEBUG_LDFLAGS) $(STATIC_LDFLAGS) $(CBOR_LDFLAGS) $(ARCHIVE_LDFLAGS)
@@ -11,7 +11,8 @@ check_PROGRAMS = \
 	test_platform \
 	test_footer \
 	test_cbor_core \
-	test_metadata_core
+	test_metadata_core \
+	test_config
 
 TESTS = $(check_PROGRAMS)
 
@@ -34,3 +35,6 @@ test_cbor_core_LDADD = $(LDADD)
 
 test_metadata_core_SOURCES = test_metadata_core.c ../unity/unity.c
 test_metadata_core_LDADD = $(LDADD)
+
+test_config_SOURCES = test_config.c ../unity/unity.c
+test_config_LDADD = $(top_builddir)/piadina/piadina-config.o $(LDADD)

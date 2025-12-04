@@ -56,7 +56,11 @@ Makefile
 
 # Optional dependencies directories
 /libcbor
+/libcbor_musl
+/libcbor_glibc
 /libarchive
+/libarchive_musl
+/libarchive_glibc
 
 # Editor / backup files
 *~

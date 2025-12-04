@@ -74,4 +74,14 @@ footer_result_t footer_append(int fd, const piadina_footer_t *footer);
 
 const char *footer_result_to_string(footer_result_t result);
 
+#include <stdio.h>
+
+/**
+ * Print footer information to a FILE stream in human-readable format.
+ *
+ * The caller retains ownership of @footer and @stream. No allocation occurs.
+ * If @stream is NULL, stderr is used.
+ */
+void footer_print(const piadina_footer_t *footer, FILE *stream);
+
 #endif /* PIADINA_COMMON_FOOTER_H */

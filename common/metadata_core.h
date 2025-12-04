@@ -30,14 +30,6 @@ typedef enum {
     METADATA_CLEANUP_INVALID
 } metadata_core_cleanup_policy_t;
 
-typedef enum {
-    METADATA_LOG_DEBUG = 0,
-    METADATA_LOG_INFO,
-    METADATA_LOG_WARN,
-    METADATA_LOG_ERROR,
-    METADATA_LOG_INVALID
-} metadata_core_log_level_t;
-
 /**
  * Validate that a metadata identifier matches the allowed pattern. Callers own
  * the string memory; this function performs no allocations.
@@ -75,13 +67,6 @@ const char *metadata_core_field_default_string(metadata_core_field_t field);
 metadata_core_cleanup_policy_t metadata_core_cleanup_policy_from_string(const char *value);
 const char *metadata_core_cleanup_policy_to_string(metadata_core_cleanup_policy_t policy);
 metadata_core_cleanup_policy_t metadata_core_cleanup_policy_default(void);
-
-/**
- * Log-level helpers. As above, returned strings are metadata_core-owned.
- */
-metadata_core_log_level_t metadata_core_log_level_from_string(const char *value);
-const char *metadata_core_log_level_to_string(metadata_core_log_level_t level);
-metadata_core_log_level_t metadata_core_log_level_default(void);
 
 /**
  * Archive-format helpers for validating user input; no allocation occurs.

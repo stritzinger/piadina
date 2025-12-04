@@ -46,6 +46,31 @@ const char *log_level_to_string(log_level_t level)
     }
 }
 
+log_level_t log_level_from_string(const char *value)
+{
+    if (!value) {
+        return LOG_LEVEL_INVALID;
+    }
+    if (strcmp(value, "debug") == 0) {
+        return LOG_LEVEL_DEBUG;
+    }
+    if (strcmp(value, "info") == 0) {
+        return LOG_LEVEL_INFO;
+    }
+    if (strcmp(value, "warn") == 0) {
+        return LOG_LEVEL_WARN;
+    }
+    if (strcmp(value, "error") == 0) {
+        return LOG_LEVEL_ERROR;
+    }
+    return LOG_LEVEL_INVALID;
+}
+
+log_level_t log_level_default(void)
+{
+    return LOG_LEVEL_INFO;
+}
+
 void log_log(log_level_t level, const char *fmt, ...)
 {
     if (level < current_level) {
@@ -57,7 +82,9 @@ void log_log(log_level_t level, const char *fmt, ...)
         stream = stderr;
     }
 
-    fprintf(stream, "[%s] ", log_level_to_string(level));
+    /* Pad after bracket so messages align (DEBUG/ERROR=5 chars, INFO/WARN=4) */
+    const char *lvl = log_level_to_string(level);
+    fprintf(stream, "[%s]%*s", lvl, 6 - (int)strlen(lvl), "");
 
     va_list args;
     va_start(args, fmt);
