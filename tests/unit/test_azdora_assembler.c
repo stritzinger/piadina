@@ -9,6 +9,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+ */
+
 #include "unity.h"
 
 #include "azdora/assembler.h"

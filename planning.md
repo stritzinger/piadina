@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2024 Dipl.Phys. Peer Stritzinger GmbH
+SPDX-License-Identifier: Apache-2.0
+-->
+
 ## Piadina / Azdora – Roadmap Implementation Checklist
 
 This document breaks down the roadmap from `specification.md` into a trackable checklist.
@@ -469,17 +474,30 @@ Mark items as you complete them.
 
 ---
 
-### Milestone 6.5 – Exported Function Documentation Consistency
+### Milestone 6.5 – Documentation and Licensing Consistency
 
-- [ ] **Define documentation style**
-  - [ ] Adopt a uniform Doxygen-style block for all exported functions across azdora, piadina, and common headers.
-  - [ ] Specify required fields per function comment: brief, ownership/lifetime notes, parameter descriptions, and return/value semantics (including error handling and caller cleanup).
-- [ ] **Apply documentation pass**
-  - [ ] Update exported functions in azdora (metadata, assembler, config, cbor encoder) to the agreed style.
-  - [ ] Update exported functions in common (cbor_core, metadata_core, footer, log, platform) to the same style.
-  - [ ] Update exported functions in piadina headers as applicable.
-- [ ] **Clarify specification**
-  - [ ] Amend `specification.md` to state the chosen documentation style and the expectation that all exported APIs include ownership/cleanup details.
+- [x] **Define documentation style**
+  - [x] Adopt a uniform Doxygen-style block for all exported functions across azdora, piadina, and common headers.
+  - [x] Specify required fields per function comment: brief, ownership/lifetime notes, parameter descriptions, and return/value semantics (including error handling and caller cleanup).
+- [x] **Apply documentation pass**
+  - [x] Update exported functions in azdora (metadata, assembler, config, cbor encoder) to the agreed style.
+  - [x] Update exported functions in common (cbor_core, metadata_core, footer, log, platform) to the same style.
+  - [x] Update exported functions in piadina headers as applicable.
+- [x] **Clarify specification**
+  - [x] Amend `specification.md` to state the chosen documentation style and the expectation that all exported APIs include ownership/cleanup details.
+- [x] **Setup Doxygen**
+  - [x] Create `Doxyfile.in` template.
+  - [x] Update `configure.ac` to check for doxygen and generate `Doxyfile`.
+  - [x] Add `doc` target to `Makefile.am`.
+- [x] **SPDX Headers**
+  - [x] Add SPDX-License-Identifier and Copyright headers to all source files.
+  - [x] Use correct comment style for each file type.
+- [x] **License Files**
+  - [x] Create `LICENSES/` directory.
+  - [x] Add `Apache-2.0.txt` and `MIT.txt`.
+- [x] **REUSE Compliance**
+  - [x] Create `.reuse/dep5` for vendored code exceptions (if any) or defaults.
+  - [x] Verify compliance with `reuse lint`.
 
 ---
 

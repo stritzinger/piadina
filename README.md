@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2024 Dipl.Phys. Peer Stritzinger GmbH
+SPDX-License-Identifier: Apache-2.0
+-->
+
 ## Piadina / Azdora – Build Instructions
 
 This repository contains the **Piadina** launcher and the **Azdora** packer.

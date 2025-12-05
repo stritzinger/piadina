@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+
 TESTS = test_bins.sh test_static_link.sh
 
 if STATIC_BUILD

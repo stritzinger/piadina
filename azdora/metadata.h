@@ -1,12 +1,11 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+ */
+
 /**
  * @file metadata.h
  * @brief Azdora metadata representation and parsing.
- *
- * Ownership rules:
- *  - The metadata struct is caller-owned; init/destroy manage internal heap.
- *  - Strings/byte buffers stored in the metadata map are owned by the metadata.
- *  - Accessors returning pointers (e.g., hashes, map roots) are borrowed and
- *    remain valid until azdora_metadata_destroy() is called.
  */
 #ifndef AZDORA_METADATA_H
 #define AZDORA_METADATA_H
@@ -76,68 +75,128 @@ typedef struct {
 } azdora_metadata_t;
 
 /**
- * Initialize a metadata struct. Caller allocates the struct; this sets internal
- * pointers to NULL and zeroes counters.
+ * @brief Initialize a metadata struct.
+ *
+ * @param[out] metadata  Pointer to the metadata struct.
+ *
+ * @note Memory Management:
+ *       Caller allocates the struct; this sets internal pointers to NULL.
  */
 void azdora_metadata_init(azdora_metadata_t *metadata);
 
 /**
- * Destroy all owned memory within the metadata struct. Caller retains the
- * struct storage and may re-init it afterward.
+ * @brief Destroy all owned memory within the metadata struct.
+ *
+ * @param[in] metadata  Pointer to the metadata struct.
+ *
+ * @note Memory Management:
+ *       Caller retains the struct storage and may re-init it afterward.
+ *       Frees all internal recursive structures.
  */
 void azdora_metadata_destroy(azdora_metadata_t *metadata);
 
 /**
- * Apply a user-provided PATH=VALUE entry (e.g., ENV.DB=foo, ENTRY_ARGS[]=bar).
- * The entry string is borrowed; any stored data is duplicated.
+ * @brief Apply a user-provided PATH=VALUE entry.
+ *
+ * @param[in,out] metadata   The metadata struct.
+ * @param[in]     entry      The entry string (e.g. "ENV.DB=foo").
+ * @param[out]    error_msg  Optional error message.
+ * @return                   AZDORA_METADATA_OK on success.
+ *
+ * @note Memory Management:
+ *       The entry string is borrowed; any stored data is duplicated.
  */
 azdora_metadata_result_t azdora_metadata_apply_meta(azdora_metadata_t *metadata,
                                                     const char *entry,
                                                     const char **error_msg);
 
 /**
- * Finalize metadata: enforce required fields, fill defaults, and normalize
- * hashes. Does not allocate beyond what is needed for defaults.
+ * @brief Finalize metadata: enforce required fields and fill defaults.
+ *
+ * @param[in,out] metadata   The metadata struct.
+ * @param[out]    error_msg  Optional error message.
+ * @return                   AZDORA_METADATA_OK on success.
+ *
+ * @note Memory Management:
+ *       Allocates memory for default values if they are missing.
  */
 azdora_metadata_result_t azdora_metadata_finalize(azdora_metadata_t *metadata,
                                                   const char **error_msg);
 
-/* Accessors */
 /**
- * Borrow the top-level metadata map. The returned pointer stays valid until
- * azdora_metadata_destroy() is called on the owning struct.
+ * @brief Borrow the top-level metadata map.
+ *
+ * @param[in] metadata  The metadata struct.
+ * @return              Pointer to the root map.
+ *
+ * @note Memory Management:
+ *       The returned pointer stays valid until azdora_metadata_destroy() is called.
  */
 const azdora_meta_map_t *azdora_metadata_root(const azdora_metadata_t *metadata);
+
 /**
- * Set a scalar string field identified by metadata_core_field_t. The value is
- * duplicated and owned by the metadata struct. Fails if the field expects a
- * non-string type.
+ * @brief Set a scalar string field.
+ *
+ * @param[in,out] metadata   The metadata struct.
+ * @param[in]     field      The field identifier.
+ * @param[in]     value      The string value.
+ * @param[out]    error_msg  Optional error message.
+ * @return                   AZDORA_METADATA_OK on success.
+ *
+ * @note Memory Management:
+ *       The value is duplicated and owned by the metadata struct.
  */
 azdora_metadata_result_t azdora_metadata_set_field_string(azdora_metadata_t *metadata,
                                                           metadata_core_field_t field,
                                                           const char *value,
                                                           const char **error_msg);
+
 /**
- * Set a scalar boolean field identified by metadata_core_field_t. The value is
- * stored by value (no heap allocations) and owned by the metadata struct. Fails
- * if the field expects a non-boolean type.
+ * @brief Set a scalar boolean field.
+ *
+ * @param[in,out] metadata   The metadata struct.
+ * @param[in]     field      The field identifier.
+ * @param[in]     value      The boolean value.
+ * @param[out]    error_msg  Optional error message.
+ * @return                   AZDORA_METADATA_OK on success.
+ *
+ * @note Memory Management:
+ *       Stored by value; no allocation.
  */
 azdora_metadata_result_t azdora_metadata_set_field_bool(azdora_metadata_t *metadata,
                                                         metadata_core_field_t field,
                                                         bool value,
                                                         const char **error_msg);
+
 /**
- * Set a scalar uint field identified by metadata_core_field_t. The value is
- * stored by value. Fails if the field expects a non-uint type.
+ * @brief Set a scalar uint field.
+ *
+ * @param[in,out] metadata   The metadata struct.
+ * @param[in]     field      The field identifier.
+ * @param[in]     value      The uint value.
+ * @param[out]    error_msg  Optional error message.
+ * @return                   AZDORA_METADATA_OK on success.
+ *
+ * @note Memory Management:
+ *       Stored by value; no allocation.
  */
 azdora_metadata_result_t azdora_metadata_set_field_uint(azdora_metadata_t *metadata,
                                                         metadata_core_field_t field,
                                                         uint64_t value,
                                                         const char **error_msg);
+
 /**
- * Set a scalar bytes field identified by metadata_core_field_t. The buffer is
- * duplicated and owned by the metadata struct. Fails if the field expects a
- * non-bytes type.
+ * @brief Set a scalar bytes field.
+ *
+ * @param[in,out] metadata   The metadata struct.
+ * @param[in]     field      The field identifier.
+ * @param[in]     data       Pointer to the data.
+ * @param[in]     len        Length of the data.
+ * @param[out]    error_msg  Optional error message.
+ * @return                   AZDORA_METADATA_OK on success.
+ *
+ * @note Memory Management:
+ *       The buffer is duplicated and owned by the metadata struct.
  */
 azdora_metadata_result_t azdora_metadata_set_field_bytes(azdora_metadata_t *metadata,
                                                          metadata_core_field_t field,
@@ -146,9 +205,18 @@ azdora_metadata_result_t azdora_metadata_set_field_bytes(azdora_metadata_t *meta
                                                          const char **error_msg);
 
 /**
- * Add an element to an array field (ENTRY_ARGS, ENTRY_ARGS_POST). If append is
- * true, index is ignored and the element is appended; otherwise index must be
- * the next dense index.
+ * @brief Add an element to an array field.
+ *
+ * @param[in,out] metadata   The metadata struct.
+ * @param[in]     field      The field identifier.
+ * @param[in]     index      The index (ignored if append is true).
+ * @param[in]     append     Whether to append or set at index.
+ * @param[in]     value      The string value to add.
+ * @param[out]    error_msg  Optional error message.
+ * @return                   AZDORA_METADATA_OK on success.
+ *
+ * @note Memory Management:
+ *       The value is duplicated and owned by the metadata struct.
  */
 azdora_metadata_result_t azdora_metadata_add_array_string(azdora_metadata_t *metadata,
                                                           metadata_core_field_t field,
@@ -158,9 +226,17 @@ azdora_metadata_result_t azdora_metadata_add_array_string(azdora_metadata_t *met
                                                           const char **error_msg);
 
 /**
- * Set a map entry (e.g., ENV.KEY) with string value. Map keys and values are
- * duplicated and owned by the metadata struct. Fails if the target field is not
- * a string-keyed/string-valued map.
+ * @brief Set a map entry (e.g., ENV.KEY) with string value.
+ *
+ * @param[in,out] metadata   The metadata struct.
+ * @param[in]     field      The field identifier (must be a map field).
+ * @param[in]     key        The key string.
+ * @param[in]     value      The value string.
+ * @param[out]    error_msg  Optional error message.
+ * @return                   AZDORA_METADATA_OK on success.
+ *
+ * @note Memory Management:
+ *       Map keys and values are duplicated and owned by the metadata struct.
  */
 azdora_metadata_result_t azdora_metadata_set_map_entry_string(azdora_metadata_t *metadata,
                                                               metadata_core_field_t field,
@@ -169,21 +245,63 @@ azdora_metadata_result_t azdora_metadata_set_map_entry_string(azdora_metadata_t 
                                                               const char **error_msg);
 
 /**
- * Typed getters that read from the metadata map. Returned pointers are borrowed
- * and valid until azdora_metadata_destroy() is called. error_msg is optional.
+ * @brief Get a string value from the metadata.
+ *
+ * @param[in]  metadata   The metadata struct.
+ * @param[in]  field      The field identifier.
+ * @param[out] out        Pointer to store the string pointer.
+ * @param[out] error_msg  Optional error message.
+ * @return                AZDORA_METADATA_OK on success.
+ *
+ * @note Memory Management:
+ *       Returned pointer is borrowed and valid until azdora_metadata_destroy().
  */
 azdora_metadata_result_t azdora_metadata_get_string(const azdora_metadata_t *metadata,
                                                     metadata_core_field_t field,
                                                     const char **out,
                                                     const char **error_msg);
+
+/**
+ * @brief Get a boolean value from the metadata.
+ *
+ * @param[in]  metadata   The metadata struct.
+ * @param[in]  field      The field identifier.
+ * @param[out] out        Pointer to store the result.
+ * @param[out] error_msg  Optional error message.
+ * @return                AZDORA_METADATA_OK on success.
+ */
 azdora_metadata_result_t azdora_metadata_get_bool(const azdora_metadata_t *metadata,
                                                   metadata_core_field_t field,
                                                   bool *out,
                                                   const char **error_msg);
+
+/**
+ * @brief Get a uint value from the metadata.
+ *
+ * @param[in]  metadata   The metadata struct.
+ * @param[in]  field      The field identifier.
+ * @param[out] out        Pointer to store the result.
+ * @param[out] error_msg  Optional error message.
+ * @return                AZDORA_METADATA_OK on success.
+ */
 azdora_metadata_result_t azdora_metadata_get_uint(const azdora_metadata_t *metadata,
                                                   metadata_core_field_t field,
                                                   uint64_t *out,
                                                   const char **error_msg);
+
+/**
+ * @brief Get a byte string value from the metadata.
+ *
+ * @param[in]  metadata   The metadata struct.
+ * @param[in]  field      The field identifier.
+ * @param[out] out        Pointer to store the data pointer.
+ * @param[out] len_out    Pointer to store the length.
+ * @param[out] error_msg  Optional error message.
+ * @return                AZDORA_METADATA_OK on success.
+ *
+ * @note Memory Management:
+ *       Returned pointer is borrowed and valid until azdora_metadata_destroy().
+ */
 azdora_metadata_result_t azdora_metadata_get_bytes(const azdora_metadata_t *metadata,
                                                    metadata_core_field_t field,
                                                    const uint8_t **out,
@@ -191,8 +309,13 @@ azdora_metadata_result_t azdora_metadata_get_bytes(const azdora_metadata_t *meta
                                                    const char **error_msg);
 
 /**
- * Pretty-print the metadata tree to the provided stream (stderr if NULL).
- * The function does not take ownership of metadata or the stream.
+ * @brief Pretty-print the metadata tree.
+ *
+ * @param[in] metadata  The metadata struct.
+ * @param[in] stream    Stream to print to (stderr if NULL).
+ *
+ * @note Memory Management:
+ *       Does not take ownership of arguments.
  */
 void azdora_metadata_print(const azdora_metadata_t *metadata, FILE *stream);
 

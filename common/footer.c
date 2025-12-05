@@ -1,3 +1,12 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+ */
+
+/**
+ * @file footer.c
+ * @brief Layout and handling of the Piadina binary footer.
+ */
 #include "footer.h"
 
 #include <errno.h>

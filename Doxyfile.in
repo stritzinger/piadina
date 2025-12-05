@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2024 Dipl.Phys. Peer Stritzinger GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+PROJECT_NAME           = "@PACKAGE_NAME@"
+PROJECT_NUMBER         = "@PACKAGE_VERSION@"
+OUTPUT_DIRECTORY       = doc/api
+INPUT                  = README.md common piadina azdora
+USE_MDFILE_AS_MAINPAGE = README.md
+RECURSIVE              = YES
+OPTIMIZE_OUTPUT_FOR_C  = YES
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+GENERATE_LATEX         = NO
+GENERATE_MAN           = NO
+GENERATE_RTF           = NO
+GENERATE_XML           = NO
+HAVE_DOT               = NO
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = YES

@@ -1,3 +1,8 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+ */
+
 /**
  * @file config.h
  * @brief Piadina launcher configuration parsing.
@@ -16,7 +21,7 @@
 
 
 /**
- * Piadina launcher exit codes.
+ * @brief Piadina launcher exit codes.
  * Codes 111-119 are reserved for launcher internal errors.
  */
 typedef enum {
@@ -30,7 +35,7 @@ typedef enum {
 } piadina_exit_code_t;
 
 /**
- * Result codes for config parsing operations.
+ * @brief Result codes for config parsing operations.
  */
 typedef enum {
     CONFIG_OK = 0,
@@ -42,7 +47,7 @@ typedef enum {
 } config_result_t;
 
 /**
- * Special action flags that cause the launcher to exit after parsing.
+ * @brief Special action flags that cause the launcher to exit after parsing.
  */
 typedef enum {
     CONFIG_ACTION_RUN = 0,       /* Normal operation: extract and launch */
@@ -53,19 +58,7 @@ typedef enum {
 } config_action_t;
 
 /**
- * Launcher configuration structure.
- *
- * After config_init(), all fields contain valid default values.
- * config_apply_env() and config_parse_args() override these values.
- *
- * String fields (cache_root) are dynamically allocated when set.
- * The config_destroy() function MUST be called to release allocated memory.
- *
- * The app_argv array is dynamically allocated and contains pointers to the
- * original argv strings. It collects:
- *   - All non-launcher arguments (not starting with --launcher-)
- *   - All arguments after the -- separator
- * This allows launcher options to be interspersed with application arguments.
+ * @brief Launcher configuration structure.
  */
 typedef struct {
     /* Action to perform (may cause early exit) */
@@ -84,78 +77,78 @@ typedef struct {
 } piadina_config_t;
 
 /**
- * Initialize a config struct with default values.
+ * @brief Initialize a config struct with default values.
  *
- * The caller provides the struct memory. No allocation occurs during init.
- * After init, all fields contain valid default values. The caller retains
- * ownership of the struct.
+ * @param[out] config  Pointer to the config struct.
  *
- * Typical usage order:
- *   1. config_init()       - set defaults
- *   2. config_apply_env()  - override with environment variables
- *   3. config_parse_args() - override with CLI arguments
+ * @note Memory Management:
+ *       The caller provides the struct memory. No allocation occurs during init.
+ *       After init, all fields contain valid default values. The caller retains
+ *       ownership of the struct.
  */
 void config_init(piadina_config_t *config);
 
 /**
- * Free any dynamically allocated resources in the config struct.
+ * @brief Free any dynamically allocated resources in the config struct.
  *
- * After calling config_destroy(), the struct should not be used unless
- * re-initialized with config_init(). The struct memory itself is NOT freed;
- * the caller retains ownership of it.
+ * @param[in] config  Pointer to the config struct.
+ *
+ * @note Memory Management:
+ *       Does NOT free the struct memory itself (caller-owned).
+ *       Frees `cache_root` and `app_argv`.
  */
 void config_destroy(piadina_config_t *config);
 
 /**
- * Apply environment variable overrides to the config.
+ * @brief Apply environment variable overrides to the config.
  *
- * Reads PIADINA_* environment variables and applies them to the config,
- * overriding defaults set by config_init(). Should be called before
- * config_parse_args() so that CLI options take final precedence.
+ * Reads PIADINA_* environment variables. Should be called before config_parse_args().
  *
- * @param config    Config struct to update (caller-owned)
- * @param error_msg Optional pointer to receive error message on failure
- * @return CONFIG_OK on success, error code otherwise
+ * @param[in,out] config     Config struct to update.
+ * @param[out]    error_msg  Optional pointer to receive error message.
+ * @return                   CONFIG_OK on success.
+ *
+ * @note Memory Management:
+ *       May allocate string fields (cache_root) in @p config.
  */
 config_result_t config_apply_env(piadina_config_t *config,
                                  const char **error_msg);
 
 /**
- * Parse command-line arguments into the config struct.
+ * @brief Parse command-line arguments into the config struct.
  *
- * Launcher options (--launcher-*) are consumed by the launcher. All other
- * arguments are collected into app_argv to be passed to the application.
- * The -- separator marks the end of launcher option processing; everything
- * after it is passed through verbatim.
+ * Launcher options are consumed. All other arguments are collected into `app_argv`.
+ * The `--` separator marks the end of launcher options.
  *
- * Example: --foo --launcher-verbose --bar -- --buz
- *   - --launcher-verbose is consumed by the launcher
- *   - --foo, --bar, --buz are passed to the application
+ * @param[in,out] config     Config struct to populate.
+ * @param[in]     argc       Argument count.
+ * @param[in]     argv       Argument vector.
+ * @param[out]    error_msg  Optional pointer to receive error message.
+ * @return                   CONFIG_OK on success.
  *
- * Unknown --launcher-* options return CONFIG_ERR_UNKNOWN_OPTION.
- *
- * On success, allocated resources (cache_root, app_argv array) are owned by
- * the config struct. On error, partial allocations are cleaned up.
- *
- * @param config    Config struct to populate (caller-owned, must be initialized)
- * @param argc      Argument count from main()
- * @param argv      Argument vector from main() (borrowed, not modified)
- * @param error_msg Optional pointer to receive error message on failure
- *                  (points to static string, not allocated)
- * @return CONFIG_OK on success, error code otherwise
+ * @note Memory Management:
+ *       Allocated resources (cache_root, app_argv array) are owned by the config struct.
+ *       @p argv is read-only and borrowed.
  */
 config_result_t config_parse_args(piadina_config_t *config,
                                   int argc, char **argv,
                                   const char **error_msg);
 
 /**
- * Convert a config result code to a human-readable string.
- * The returned string is statically allocated and owned by the module.
+ * @brief Convert a config result code to a string.
+ *
+ * @param[in] result  The result code.
+ * @return            String description.
+ *
+ * @note Memory Management:
+ *       Returns static string constant.
  */
 const char *config_result_to_string(config_result_t result);
 
 /**
- * Print launcher help message to stderr.
+ * @brief Print launcher help message to stderr.
+ *
+ * @param[in] program_name  Name of the executable.
  */
 void config_print_help(const char *program_name);
 

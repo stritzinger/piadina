@@ -1,3 +1,12 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+ */
+
+/**
+ * @file log.c
+ * @brief Simple logging abstraction implementation.
+ */
 #include "log.h"
 
 #include <stdarg.h>

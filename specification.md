@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2024 Dipl.Phys. Peer Stritzinger GmbH
+SPDX-License-Identifier: Apache-2.0
+-->
+
 ## Piadina / Azdora – Planning and Specification (v0.1)
 
 ### 0. Glossary
@@ -1162,6 +1167,59 @@ We need to be strict about memory to avoid leaks and use-after-free bugs.
 - **Tools**:
   - ASan (`-fsanitize=address`) in CI.
   - Valgrind for leak checks.
+
+#### 6.6 Code Documentation Standard
+
+To ensure maintainability and clarity, all exported functions and public module interfaces must be documented using **Doxygen-style** comments. This applies to all headers in `common/`, `piadina/`, and `azdora/`.
+
+**Format:**
+
+```c
+/**
+ * @brief Short description of the function.
+ *
+ * Detailed description explaining what the function does, its side effects,
+ * and any important context.
+ *
+ * @param[in]  param_name  Description of the parameter.
+ * @param[out] out_param   Description of the output parameter.
+ * @return                 Description of the return value (e.g., 0 on success).
+ *
+ * @note Memory Management:
+ *       Explicitly state who owns the memory for parameters and return values.
+ *       - "Caller retains ownership of..."
+ *       - "Caller must free the returned string using..."
+ *       - "Function creates a copy..."
+ */
+```
+
+**Requirements:**
+
+1.  **@brief**: Mandatory 1-line summary.
+2.  **@param**: Document every parameter with `[in]`, `[out]`, or `[in,out]`.
+3.  **@return**: Document return values, including specific error codes if applicable.
+4.  **Memory Management**: Every function that handles pointers must explicitly state ownership rules (who allocates, who frees) in a `@note` or detailed description.
+5.  **Module Documentation**: Each header file should start with a `@file` block describing the module's purpose.
+
+#### 6.7 Licensing Compliance
+
+To ensure SPDX and REUSE compliance:
+
+1.  **SPDX Headers**: All source files (`.c`, `.h`, `.am`, `.ac`, `.sh`, etc.) MUST include a standard SPDX header at the very top:
+    ```c
+    /*
+     * SPDX-License-Identifier: Apache-2.0
+     * Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+     */
+    ```
+    Use the appropriate comment style for the file type (`#` for shell/make/python).
+
+2.  **Vendored Code**:
+    - External code in `tests/unity/` retains its original license headers.
+    - The `.reuse/dep5` file may be used to declare licenses for files that cannot be modified, though adding headers directly is preferred where possible.
+
+3.  **License Files**:
+    - The repository MUST contain a `LICENSES/` directory with the full text of all used licenses (e.g., `Apache-2.0.txt`, `MIT.txt`).
 
 ### 7. Roadmap and Milestones
 

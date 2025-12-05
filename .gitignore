@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2024 Dipl.Phys. Peer Stritzinger GmbH
+# SPDX-License-Identifier: Apache-2.0
+
 # Autotools generated files
 /aclocal.m4
 /autom4te.cache/
@@ -61,6 +64,10 @@ Makefile
 /libarchive
 /libarchive_musl
 /libarchive_glibc
+
+# Generated documentation
+Doxyfile
+doc/api
 
 # Output files
 output.piadina

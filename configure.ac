@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+
 AC_PREREQ([2.69])
 AC_INIT([Piadina Project],[0.1.0],[support@stritzinger.com])
 AC_CONFIG_SRCDIR([piadina/main.c])
@@ -400,6 +403,16 @@ AC_SUBST([ARCHIVE_LDFLAGS])
 AC_SUBST([ARCHIVE_LIBS])
 
 dnl ============================================================
+dnl Documentation support (Doxygen)
+dnl ============================================================
+
+AC_CHECK_PROGS([DOXYGEN], [doxygen])
+if test -z "$DOXYGEN"; then
+    AC_MSG_WARN([doxygen not found - documentation generation will not be available])
+fi
+AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
+
+dnl ============================================================
 dnl Package metadata
 dnl ============================================================
 
@@ -425,6 +438,7 @@ Piadina Project configuration summary:
 
 AC_CONFIG_FILES([
 Makefile
+Doxyfile
 common/Makefile
 piadina/Makefile
 azdora/Makefile

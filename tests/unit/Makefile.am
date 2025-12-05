@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+
 AM_CPPFLAGS = -I$(top_srcdir)/tests/unity -I$(top_builddir) -I$(top_srcdir)/common \
 	-I$(top_srcdir) $(CBOR_CPPFLAGS) $(ARCHIVE_CPPFLAGS)
 

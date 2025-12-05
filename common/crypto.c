@@ -1,5 +1,12 @@
 /*
- * Minimal SHA-256 implementation.
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+ */
+
+/**
+ * @file crypto.c
+ * @brief Minimal SHA-256 implementation.
+ *
  * Based on FIPS 180-4 and kept dependency-free for static builds.
  */
 #include "crypto.h"

@@ -1,9 +1,11 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+ */
+
 /**
  * @file cbor_encoder.h
  * @brief CBOR encoding helpers for Azdora metadata.
- *
- * Ownership: the encoder does not take ownership of metadata; callers own the
- * returned buffer from azdora_cbor_encode_metadata and must free it.
  */
 #ifndef AZDORA_CBOR_ENCODER_H
 #define AZDORA_CBOR_ENCODER_H
@@ -21,14 +23,17 @@ typedef enum {
 } azdora_cbor_result_t;
 
 /**
- * Encode the provided metadata tree into a newly allocated CBOR buffer.
+ * @brief Encode the provided metadata tree into a newly allocated CBOR buffer.
  *
- * @param metadata  Borrowed pointer to metadata tree.
- * @param out_data  Output buffer (malloc'd on success, caller frees with free()).
- * @param out_size  Output buffer length in bytes (not set on failure).
+ * @param[in]  metadata  Borrowed pointer to metadata tree.
+ * @param[out] out_data  Pointer to store the allocated buffer.
+ * @param[out] out_size  Pointer to store the buffer size.
+ * @return               AZDORA_CBOR_OK on success.
  *
- * The function never takes ownership of the metadata input. The returned buffer
- * is a fresh allocation owned by the caller.
+ * @note Memory Management:
+ *       The encoder does not take ownership of @p metadata.
+ *       The returned buffer in @p out_data is a fresh allocation owned by the caller,
+ *       who must free it using free().
  */
 azdora_cbor_result_t azdora_cbor_encode_metadata(const azdora_metadata_t *metadata,
                                                  uint8_t **out_data,

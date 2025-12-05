@@ -1,0 +1,6 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Piadina
+Upstream-Contact: peer@stritzinger.org
+Source: https://github.com/stritzinger/piadina
+Copyright: 2024 Dipl.Phys. Peer Stritzinger GmbH
+License: Apache-2.0

@@ -1,3 +1,8 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+ */
+
 /**
  * @file assembler.h
  * @brief Assembles launcher + metadata + placeholder archive into output binary.
@@ -19,9 +24,32 @@ typedef enum {
     AZDORA_ASSEMBLER_ERR_FOOTER
 } azdora_assembler_result_t;
 
+/**
+ * @brief Build the self-extracting binary.
+ *
+ * This function reads the launcher binary, encodes the metadata, generates
+ * a placeholder archive, constructs the footer, and writes
+ * everything to the output path specified in the config.
+ *
+ * @param[in] config    Configuration struct (paths, options).
+ * @param[in] metadata  Populated metadata struct.
+ * @return              AZDORA_ASSEMBLER_OK on success, or an error code.
+ *
+ * @note Memory Management:
+ *       Caller retains ownership of @p config and @p metadata.
+ */
 azdora_assembler_result_t azdora_assembler_build(const azdora_config_t *config,
                                                  const azdora_metadata_t *metadata);
 
+/**
+ * @brief Convert an assembler result code to a string.
+ *
+ * @param[in] result  The result code.
+ * @return            String description.
+ *
+ * @note Memory Management:
+ *       Returns a pointer to static string constants. Caller must not free it.
+ */
 const char *azdora_assembler_result_to_string(azdora_assembler_result_t result);
 
 #endif /* AZDORA_ASSEMBLER_H */

@@ -1,3 +1,12 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+ */
+
+/**
+ * @file platform.h
+ * @brief Platform-specific abstractions (executable path, etc.).
+ */
 #ifndef PIADINA_COMMON_PLATFORM_H
 #define PIADINA_COMMON_PLATFORM_H
 
@@ -12,12 +21,16 @@ typedef enum {
 } platform_result_t;
 
 /**
- * Resolve the absolute filesystem path of the running executable.
+ * @brief Resolve the absolute filesystem path of the running executable.
  *
- * The caller must pass a writable buffer and its size; the function writes the
- * NUL-terminated path into that buffer and never allocates memory internally.
- * Ownership of @buf remains with the caller, and the contents stay valid until
- * the caller overwrites them.
+ * @param[in]  buf       Buffer to write the path into.
+ * @param[in]  buf_size  Size of the buffer in bytes.
+ * @return               PLATFORM_OK on success, or an error code.
+ *
+ * @note Memory Management:
+ *       The caller owns @p buf and must provide sufficient storage.
+ *       The function writes the NUL-terminated path into that buffer and never
+ *       allocates memory internally.
  */
 platform_result_t platform_get_self_exe_path(char *buf, size_t buf_size);
 

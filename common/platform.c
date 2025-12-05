@@ -1,3 +1,12 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+ */
+
+/**
+ * @file platform.c
+ * @brief Platform-specific abstractions implementation.
+ */
 #include "platform.h"
 
 #include <errno.h>

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+
 bin_PROGRAMS = piadina
 piadina_SOURCES = main.c config.c config.h
 piadina_CPPFLAGS = -I$(top_builddir) -I$(top_srcdir) $(CBOR_CPPFLAGS) $(ARCHIVE_CPPFLAGS)

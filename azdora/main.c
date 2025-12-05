@@ -1,3 +1,12 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+ */
+
+/**
+ * @file main.c
+ * @brief Azdora packer entry point.
+ */
 #include <stdio.h>
 #include <stdlib.h>
 

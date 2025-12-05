@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+
 # Test script to verify that binaries are statically linked when expected.
 # This test only runs when STATIC_BUILD=yes is passed via the environment.
 set -euo pipefail

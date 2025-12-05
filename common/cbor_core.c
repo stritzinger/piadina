@@ -1,3 +1,12 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+ */
+
+/**
+ * @file cbor_core.c
+ * @brief Core CBOR abstraction implementation.
+ */
 #include "cbor_core.h"
 
 #include <cbor.h>

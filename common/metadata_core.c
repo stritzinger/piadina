@@ -1,3 +1,12 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+ */
+
+/**
+ * @file metadata_core.c
+ * @brief Core metadata definitions and validation logic.
+ */
 #include "metadata_core.h"
 
 #include <ctype.h>

@@ -1,7 +1,17 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+ */
+
+/**
+ * @file footer.h
+ * @brief Layout and handling of the Piadina binary footer.
+ */
 #ifndef PIADINA_COMMON_FOOTER_H
 #define PIADINA_COMMON_FOOTER_H
 
 #include <stdint.h>
+#include <stdio.h>
 
 #define PIADINA_FOOTER_MAGIC "PIADINA\0"
 #define PIADINA_FOOTER_MAGIC_SIZE 8
@@ -38,50 +48,74 @@ typedef struct __attribute__((packed)) {
 _Static_assert(sizeof(piadina_footer_t) == PIADINA_FOOTER_SIZE, "Footer struct must be packed");
 
 /**
- * Read and validate the footer at the end of the given launcher binary.
+ * @brief Read and validate the footer at the end of the given launcher binary.
  *
- * The caller provides @out_footer storage and retains ownership. The function
- * does not allocate memory; it simply populates the supplied struct. The file
- * descriptor is used to locate, read, and validate the footer as well as check
- * that metadata/archive offsets and sizes fall within the file contents.
+ * @param[in]  fd          File descriptor of the binary.
+ * @param[out] out_footer  Buffer to store the read footer.
+ * @return                 FOOTER_OK on success, or an error code.
+ *
+ * @note Memory Management:
+ *       The caller provides @p out_footer storage and retains ownership.
+ *       The function does not allocate memory; it simply populates the supplied struct.
  */
 footer_result_t footer_read(int fd, piadina_footer_t *out_footer);
 
 /**
- * Validate the contents of a footer previously read into caller-owned storage.
+ * @brief Validate the contents of a footer previously read.
  *
- * No allocation occurs; the footer pointer remains owned by the caller for the
- * desired lifetime of the parsed data. This routine only checks structural
- * fields (magic/version/reserved) and does not perform file-size bounds checks.
+ * This checks structural fields (magic, version, reserved bytes).
+ *
+ * @param[in] footer  Pointer to the footer struct to validate.
+ * @return            FOOTER_OK on success, or an error code.
+ *
+ * @note Memory Management:
+ *       No allocation occurs; the footer pointer remains owned by the caller.
  */
 footer_result_t footer_validate(const piadina_footer_t *footer);
 
 /**
- * Initialize a footer struct with defaults (magic string, layout version, zeros).
+ * @brief Initialize a footer struct with defaults.
  *
- * The caller owns @footer and can mutate offsets/sizes afterward. No allocation
- * occurs; the memory is entirely caller provided.
+ * Sets magic, layout version, and zeroes other fields.
+ *
+ * @param[out] footer  Pointer to the footer struct to initialize.
+ *
+ * @note Memory Management:
+ *       The caller owns @p footer. No allocation occurs.
  */
 void footer_prepare(piadina_footer_t *footer);
 
 /**
- * Append a validated footer to the end of the launcher binary.
+ * @brief Append a validated footer to the end of the launcher binary.
  *
- * The caller retains ownership of @footer and must ensure the metadata and
- * archive sections already exist in the file descriptor. No memory is allocated;
- * the function validates ranges against the current file size before writing.
+ * @param[in] fd      File descriptor open for writing.
+ * @param[in] footer  Pointer to the footer to write.
+ * @return            FOOTER_OK on success, or an error code.
+ *
+ * @note Memory Management:
+ *       The caller retains ownership of @p footer. No memory is allocated.
  */
 footer_result_t footer_append(int fd, const piadina_footer_t *footer);
 
+/**
+ * @brief Convert a footer result code to a string.
+ *
+ * @param[in] result  The result code.
+ * @return            String description of the result.
+ *
+ * @note Memory Management:
+ *       Returns a pointer to static string constants. Caller must not free it.
+ */
 const char *footer_result_to_string(footer_result_t result);
 
-#include <stdio.h>
-
 /**
- * Print footer information to a FILE stream in human-readable format.
+ * @brief Print footer information to a FILE stream in human-readable format.
  *
- * The caller retains ownership of @footer and @stream. No allocation occurs.
- * If @stream is NULL, stderr is used.
+ * @param[in] footer  Pointer to the footer to print.
+ * @param[in] stream  Stream to print to (defaults to stderr if NULL).
+ *
+ * @note Memory Management:
+ *       The caller retains ownership of @p footer and @p stream. No allocation occurs.
  */
 void footer_print(const piadina_footer_t *footer, FILE *stream);
 

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2024 Dipl.Phys. Peer Stritzinger GmbH
+
 bin_PROGRAMS = azdora
 azdora_SOURCES = \
 	main.c \
