@@ -37,6 +37,7 @@ typedef struct {
     char *payload_dir;     /* Owned string */
     char *output_path;     /* Owned string (may be defaulted) */
     bool verbose;
+    bool quiet;
     size_t meta_count;
     char **meta_entries;   /* Owned array of owned strings */
 } azdora_config_t;

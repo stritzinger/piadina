@@ -2,7 +2,10 @@
  * @file test_azdora_assembler.c
  * @brief Unit tests for azdora/assembler.{c,h}
  */
+#include "../libarchive/libarchive/archive.h"
+#include "../libarchive/libarchive/archive_entry.h"
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,6 +48,81 @@ static void build_metadata(azdora_metadata_t *md)
     TEST_ASSERT_EQUAL(AZDORA_METADATA_OK, azdora_metadata_finalize(md, &error));
 }
 
+static char *create_payload_dir(char *out_file_path, size_t out_len)
+{
+    char tmpl[] = "/tmp/azdora_payloadXXXXXX";
+    char *dir = mkdtemp(tmpl);
+    TEST_ASSERT_NOT_NULL_MESSAGE(dir, "mkdtemp failed for payload");
+    char *dir_copy = strdup(dir);
+    TEST_ASSERT_NOT_NULL(dir_copy);
+
+    int written = snprintf(out_file_path, out_len, "%s/hello.txt", dir_copy);
+    TEST_ASSERT_TRUE(written > 0);
+    TEST_ASSERT_TRUE((size_t)written < out_len);
+
+    int fd = open(out_file_path, O_CREAT | O_TRUNC | O_WRONLY, 0644);
+    TEST_ASSERT_TRUE(fd >= 0);
+    const char *payload = "hello from payload\n";
+    TEST_ASSERT_EQUAL((ssize_t)strlen(payload),
+                      write(fd, payload, strlen(payload)));
+    close(fd);
+
+    return dir_copy;
+}
+
+static void cleanup_payload(const char *file_path, const char *dir_path)
+{
+    if (file_path) {
+        unlink(file_path);
+    }
+    if (dir_path) {
+        rmdir(dir_path);
+    }
+}
+
+static void verify_archive_entry(int fd,
+                                 const piadina_footer_t *footer,
+                                 const char *rel_path,
+                                 const char *expected_content)
+{
+    TEST_ASSERT_TRUE(lseek(fd, (off_t)footer->archive_offset, SEEK_SET) >= 0);
+
+    uint8_t *archive_buf = malloc((size_t)footer->archive_size);
+    TEST_ASSERT_NOT_NULL(archive_buf);
+    ssize_t n = read(fd, archive_buf, (size_t)footer->archive_size);
+    TEST_ASSERT_EQUAL((ssize_t)footer->archive_size, n);
+
+    struct archive *a = archive_read_new();
+    TEST_ASSERT_NOT_NULL(a);
+    archive_read_support_format_tar(a);
+    archive_read_support_filter_gzip(a);
+    TEST_ASSERT_EQUAL(ARCHIVE_OK,
+                      archive_read_open_memory(a, archive_buf, (size_t)footer->archive_size));
+
+    bool found = false;
+    struct archive_entry *entry = NULL;
+    while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+        const char *path = archive_entry_pathname(entry);
+        if (strcmp(path, rel_path) == 0) {
+            size_t size = (size_t)archive_entry_size(entry);
+            char *buf = malloc(size + 1);
+            TEST_ASSERT_NOT_NULL(buf);
+            ssize_t nr = archive_read_data(a, buf, size);
+            TEST_ASSERT_EQUAL((ssize_t)size, nr);
+            buf[size] = '\0';
+            TEST_ASSERT_EQUAL_STRING(expected_content, buf);
+            free(buf);
+            found = true;
+            break;
+        }
+        archive_read_data_skip(a);
+    }
+
+    archive_read_free(a);
+    free(archive_buf);
+    TEST_ASSERT_TRUE_MESSAGE(found, "expected entry not found in archive");
+}
+
 static void test_assembler_writes_footer_and_metadata(void)
 {
     char launcher_template[] = "/tmp/azdora_launcherXXXXXX";
@@ -58,10 +136,13 @@ static void test_assembler_writes_footer_and_metadata(void)
     close(out_fd);
     unlink(output_template); /* assembler will recreate */
 
+    char payload_file[PATH_MAX];
+    char *payload_dir = create_payload_dir(payload_file, sizeof(payload_file));
+
     azdora_config_t cfg;
     azdora_config_init(&cfg);
     cfg.launcher_path = strdup(launcher_template);
-    cfg.payload_dir = strdup("/tmp/payload");
+    cfg.payload_dir = strdup(payload_dir);
     cfg.output_path = strdup(output_template);
 
     azdora_metadata_t md;
@@ -77,9 +158,9 @@ static void test_assembler_writes_footer_and_metadata(void)
     piadina_footer_t footer;
     footer_result_t f_rc = footer_read(fd, &footer);
     TEST_ASSERT_EQUAL(FOOTER_OK, f_rc);
-    TEST_ASSERT_EQUAL_UINT64(strlen("LAUNCHER"), footer.metadata_offset);
-    TEST_ASSERT_EQUAL_UINT64(footer.metadata_offset + footer.metadata_size, footer.archive_offset);
-    TEST_ASSERT_EQUAL_UINT64(0, footer.archive_size);
+    TEST_ASSERT_EQUAL_UINT64(strlen("LAUNCHER"), footer.archive_offset);
+    TEST_ASSERT_TRUE(footer.archive_size > 0);
+    TEST_ASSERT_EQUAL_UINT64(footer.archive_offset + footer.archive_size, footer.metadata_offset);
     TEST_ASSERT_TRUE(footer.metadata_size > 0);
     TEST_ASSERT_TRUE(footer.metadata_size < 4096);
 
@@ -119,14 +200,19 @@ static void test_assembler_writes_footer_and_metadata(void)
     TEST_ASSERT_EQUAL_MEMORY(computed_footer_hash, footer.footer_hash,
                              sizeof(computed_footer_hash));
 
+    /* Validate archive contents */
+    verify_archive_entry(fd, &footer, "hello.txt", "hello from payload\n");
+
     free(metadata_buf);
     cbor_core_decoder_destroy(dec);
     close(fd);
 
     unlink(launcher_template);
     unlink(output_template);
+    cleanup_payload(payload_file, payload_dir);
     azdora_metadata_destroy(&md);
     azdora_config_destroy(&cfg);
+    free(payload_dir);
 }
 
 int main(void)

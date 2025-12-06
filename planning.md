@@ -505,55 +505,52 @@ Mark items as you complete them.
 
 ### `common/tar_encoder.{c,h}` and `common/tar_decoder.{c,h}`
 
-- [ ] **Interface design only (no in-tree implementation yet)**
-  - [ ] Define C APIs for:
-    - [ ] Creating a tar stream from a directory tree (`tar_encoder`).
-    - [ ] Extracting a decompressed tar stream into a target directory (`tar_decoder`).
-  - [ ] Define shared error codes and basic invariants (e.g. path normalization, safety rules) that will be honored by the future in-tree implementation.
-  - [ ] Ensure these interfaces will be suitable for being implemented without `libarchive` in milestone 15.
+- [ ] **Deferred to milestone 15**
+  - These shared tar interfaces are not introduced in milestone 7 to avoid locking the API early. They will be designed and added alongside the in-tree tar implementation in milestone 15.
 
 ### `piadina/extractor_tar_gzip.{c,h}` (via `libarchive`)
 
-- [ ] **Implementation**
-  - [ ] Implement an `extractor_tar_gzip` module that:
-    - [ ] Uses `libarchive` to read a tar+gzip stream from an open file descriptor and offset/size.
-    - [ ] Extracts entries into a target directory, honoring safety checks (no escape outside target root).
-    - [ ] Translates `libarchive` errors into project-specific error codes.
-  - [ ] Integrate this module into `piadina/archive.{c,h}` as the concrete backend for `"tar+gzip"`.
+- [x] **Implementation**
+  - [x] Implement an `extractor_tar_gzip` module that:
+    - [x] Uses `libarchive` to read a tar+gzip stream from an open file descriptor and offset/size.
+    - [x] Extracts entries into a target directory, honoring safety checks (no escape outside target root).
+    - [x] Translates `libarchive` errors into project-specific error codes.
+  - [x] Integrate this module into `piadina/archive.{c,h}` as the concrete backend for `"tar+gzip"`.
 
 ### `azdora/packer_tar_gzip.{c,h}` (via `libarchive`)
 
-- [ ] **Implementation**
-  - [ ] Implement a `packer_tar_gzip` module that:
-    - [ ] Uses `libarchive` to walk a payload directory and emit a tar+gzip archive.
-    - [ ] Writes the archive bytes to the output file in the layout expected by `assembler.{c,h}`.
-    - [ ] Translates `libarchive` errors into project-specific error codes.
-  - [ ] Integrate this module into `azdora/assembler.{c,h}` so the archive block is produced via `libarchive`.
+- [x] **Implementation**
+  - [x] Implement a `packer_tar_gzip` module that:
+    - [x] Uses `libarchive` to walk a payload directory and emit a tar+gzip archive.
+    - [x] Writes the archive bytes to the output file in the layout expected by `assembler.{c,h}`.
+    - [x] Translates `libarchive` errors into project-specific error codes.
+  - [x] Integrate this module into `azdora/assembler.{c,h}` so the archive block is produced via `libarchive`.
 
 ### Integration into Azdora
 
-- [ ] **Tar + gzip pipeline for Azdora**
-  - [ ] Ensure `packer_tar_gzip` is invoked from `azdora/assembler` to:
-    - [ ] Walk the payload directory and produce a tar+gzip archive using `libarchive`.
-    - [ ] Write the resulting tar+gzip stream into the archive block region of the final binary.
-  - [ ] For now, continue to use placeholder or zeroed hashes in footer/metadata (until hashing is implemented in milestone 12).
+- [x] **Tar + gzip pipeline for Azdora**
+  - [x] Ensure `packer_tar_gzip` is invoked from `azdora/assembler` to:
+    - [x] Walk the payload directory and produce a tar+gzip archive using `libarchive`.
+    - [x] Write the resulting tar+gzip stream into the archive block region of the final binary.
+  - [x] For now, continue to use placeholder or zeroed hashes in footer/metadata (until hashing is implemented in milestone 12).
+
 ### Tests for milestone 7
 
-- [ ] **Unit tests for `extractor_tar_gzip` and `packer_tar_gzip`**
-  - [ ] Create simple directory trees (files, dirs, symlinks).
-  - [ ] Pack them with `packer_tar_gzip` (using `libarchive`), then extract with `extractor_tar_gzip`.
-  - [ ] Verify:
-    - [ ] Paths.
-    - [ ] File modes (to the extent recorded).
-    - [ ] Contents.
-    - [ ] Symlink behavior and safety checks (no extraction outside target root).
+- [x] **Unit tests for `extractor_tar_gzip` and `packer_tar_gzip`**
+  - [x] Create simple directory trees (files, dirs, symlinks).
+  - [x] Pack them with `packer_tar_gzip` (using `libarchive`), then extract with `extractor_tar_gzip`.
+  - [x] Verify:
+    - [x] Paths.
+    - [x] File modes (to the extent recorded).
+    - [x] Contents.
+    - [x] Symlink behavior and safety checks (no extraction outside target root).
 
-- [ ] **Integration tests**
-  - [ ] Azdora + Piadina:
-    - [ ] Create a payload directory.
-    - [ ] Pack it using Azdora.
-    - [ ] Run the resulting binary with Piadina and confirm that extraction and launch succeed.
-    - [ ] Optionally, use an external tar tool to verify the embedded archive is a valid tar+gzip stream.
+- [x] **Integration tests**
+  - [x] Azdora + Piadina:
+    - [x] Create a payload directory.
+    - [x] Pack it using Azdora.
+    - [x] Run the resulting binary with Piadina and confirm that extraction and launch succeed.
+    - [x] Optionally, use an external tar tool to verify the embedded archive is a valid tar+gzip stream.
 
 ---
 

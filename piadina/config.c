@@ -38,7 +38,7 @@ void config_init(piadina_config_t *config)
     config->action = CONFIG_ACTION_RUN;
     config->cache_root = NULL;  /* NULL means use metadata default */
     config->cleanup_policy = metadata_core_cleanup_policy_default();
-    config->log_level = log_level_default();
+    config->log_level = LOG_LEVEL_WARN;
     config->validate = metadata_core_validate_default();
     config->force_extract = false;
     config->app_argc = 0;
@@ -195,6 +195,11 @@ static config_result_t process_launcher_option(piadina_config_t *config,
 
     if (option_matches(opt_name, "verbose")) {
         config->log_level = LOG_LEVEL_DEBUG;
+        return CONFIG_OK;
+    }
+
+    if (option_matches(opt_name, "quiet")) {
+        config->log_level = LOG_LEVEL_ERROR;
         return CONFIG_OK;
     }
 

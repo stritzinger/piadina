@@ -7,7 +7,9 @@ azdora_SOURCES = \
 	config.c \
 	metadata.c \
 	cbor_encoder.c \
-	assembler.c
+	assembler.c \
+	packer_tar_gzip.c \
+	packer_tar_gzip.h
 
 azdora_CPPFLAGS = -I$(top_builddir) -I$(top_srcdir) -I$(top_srcdir)/common $(CBOR_CPPFLAGS) $(ARCHIVE_CPPFLAGS)
 azdora_CFLAGS = $(DEBUG_CFLAGS) $(STATIC_CFLAGS)

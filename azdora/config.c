@@ -36,6 +36,7 @@ void azdora_config_init(azdora_config_t *config)
     config->payload_dir = NULL;
     config->output_path = NULL;
     config->verbose = false;
+    config->quiet = false;
     config->meta_count = 0;
     config->meta_entries = NULL;
 }
@@ -82,6 +83,12 @@ azdora_config_result_t azdora_config_parse_args(azdora_config_t *config,
         }
         if (strcmp(arg, "--verbose") == 0 || strcmp(arg, "-v") == 0) {
             config->verbose = true;
+            config->quiet = false;
+            continue;
+        }
+        if (strcmp(arg, "--quiet") == 0 || strcmp(arg, "-q") == 0) {
+            config->quiet = true;
+            config->verbose = false;
             continue;
         }
 
@@ -267,6 +274,7 @@ void azdora_config_print_help(const char *program_name)
     fprintf(stderr, "                           Arrays:  KEY[]=VAL (append) or KEY[IDX]=VAL\n");
     fprintf(stderr, "                           Maps:    MAP.KEY=VAL (KEY must match [A-Za-z0-9_-]+)\n");
     fprintf(stderr, "  -v, --verbose            Trace packing steps and dump metadata/footer\n");
+    fprintf(stderr, "  -q, --quiet              Suppress non-error output (also disables progress)\n");
     fprintf(stderr, "  -h, --help               Show this help message\n");
     fprintf(stderr, "      --version            Show version\n");
 }

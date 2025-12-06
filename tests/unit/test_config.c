@@ -42,7 +42,7 @@ static void test_config_init_sets_defaults(void)
     TEST_ASSERT_EQUAL(CONFIG_ACTION_RUN, config.action);
     TEST_ASSERT_NULL(config.cache_root);  /* NULL means use metadata default */
     TEST_ASSERT_EQUAL(METADATA_CLEANUP_ONCRASH, config.cleanup_policy);
-    TEST_ASSERT_EQUAL(LOG_LEVEL_INFO, config.log_level);
+    TEST_ASSERT_EQUAL(LOG_LEVEL_WARN, config.log_level);
     TEST_ASSERT_FALSE(config.validate);
     TEST_ASSERT_FALSE(config.force_extract);
     TEST_ASSERT_EQUAL(0, config.app_argc);

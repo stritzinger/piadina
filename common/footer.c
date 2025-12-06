@@ -203,15 +203,6 @@ static footer_result_t footer_validate_ranges(const piadina_footer_t *footer,
                                               uint64_t content_size,
                                               bool require_archive_exact)
 {
-    uint64_t metadata_end = 0;
-    if (add_overflow(footer->metadata_offset, footer->metadata_size, &metadata_end)) {
-        return FOOTER_ERR_METADATA_RANGE;
-    }
-
-    if (metadata_end > footer->archive_offset) {
-        return FOOTER_ERR_METADATA_RANGE;
-    }
-
     uint64_t archive_end = 0;
     if (add_overflow(footer->archive_offset, footer->archive_size, &archive_end)) {
         return FOOTER_ERR_ARCHIVE_RANGE;
@@ -221,8 +212,21 @@ static footer_result_t footer_validate_ranges(const piadina_footer_t *footer,
         return FOOTER_ERR_ARCHIVE_RANGE;
     }
 
-    if (require_archive_exact && archive_end != content_size) {
+    if (archive_end > footer->metadata_offset) {
         return FOOTER_ERR_ARCHIVE_RANGE;
+    }
+
+    uint64_t metadata_end = 0;
+    if (add_overflow(footer->metadata_offset, footer->metadata_size, &metadata_end)) {
+        return FOOTER_ERR_METADATA_RANGE;
+    }
+
+    if (metadata_end > content_size) {
+        return FOOTER_ERR_METADATA_RANGE;
+    }
+
+    if (require_archive_exact && metadata_end != content_size) {
+        return FOOTER_ERR_METADATA_RANGE;
     }
 
     return FOOTER_OK;

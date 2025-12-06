@@ -18,10 +18,10 @@ static piadina_footer_t make_valid_footer(void)
 {
     piadina_footer_t footer;
     footer_prepare(&footer);
-    footer.metadata_offset = 16;
-    footer.metadata_size = 32;
-    footer.archive_offset = footer.metadata_offset + footer.metadata_size;
+    footer.archive_offset = 16;
     footer.archive_size = 64;
+    footer.metadata_offset = footer.archive_offset + footer.archive_size;
+    footer.metadata_size = 32;
     return footer;
 }
 
@@ -54,7 +54,7 @@ static void test_footer_read_and_validate_success(void)
     int fd = create_temp_file();
     piadina_footer_t footer = make_valid_footer();
 
-    uint64_t data_size = footer.archive_offset + footer.archive_size;
+    uint64_t data_size = footer.metadata_offset + footer.metadata_size;
     ensure_data_region(fd, data_size);
     TEST_ASSERT_EQUAL(FOOTER_OK, footer_append(fd, &footer));
 
@@ -70,7 +70,7 @@ static void test_footer_detects_bad_magic(void)
     piadina_footer_t footer = make_valid_footer();
     footer.magic[0] = 'X';
 
-    uint64_t data_size = footer.archive_offset + footer.archive_size;
+    uint64_t data_size = footer.metadata_offset + footer.metadata_size;
     ensure_data_region(fd, data_size);
     write_or_fail(fd, &footer, sizeof(footer));
 
@@ -126,9 +126,9 @@ static void test_footer_metadata_range_invalid(void)
 {
     int fd = create_temp_file();
     piadina_footer_t footer = make_valid_footer();
-    footer.metadata_size = footer.archive_offset - footer.metadata_offset + 1; /* overlaps archive */
+    footer.metadata_size = footer.metadata_size + 100; /* truncated metadata */
 
-    uint64_t data_size = footer.archive_offset + footer.archive_size;
+    uint64_t data_size = footer.metadata_offset + footer.metadata_size - 1;
     ensure_data_region(fd, data_size);
     write_or_fail(fd, &footer, sizeof(footer));
 
@@ -172,7 +172,7 @@ static void test_footer_append_validates_structural_issues(void)
     piadina_footer_t footer = make_valid_footer();
     footer.magic[0] = 'X';
 
-    uint64_t data_size = footer.archive_offset + footer.archive_size;
+    uint64_t data_size = footer.metadata_offset + footer.metadata_size;
     ensure_data_region(fd, data_size);
 
     TEST_ASSERT_EQUAL(FOOTER_ERR_BAD_MAGIC, footer_append(fd, &footer));

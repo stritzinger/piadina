@@ -478,7 +478,8 @@ void azdora_metadata_print(const azdora_metadata_t *metadata, FILE *stream)
     if (!root) {
         return;
     }
-    metadata_print_map(root, 0, stream);
+    /* Start with a two-space indentation so verbose output aligns with footer print. */
+    metadata_print_map(root, 2, stream);
 }
 
 /* Typed setters built on top of the generic map */

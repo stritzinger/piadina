@@ -20,7 +20,8 @@ check_PROGRAMS = \
 	test_azdora_config \
 	test_azdora_metadata \
 	test_azdora_cbor_encode \
-	test_azdora_assembler
+	test_azdora_assembler \
+	test_tar_gzip
 
 TESTS = $(check_PROGRAMS)
 
@@ -64,4 +65,10 @@ test_azdora_assembler_SOURCES = test_azdora_assembler.c ../unity/unity.c
 test_azdora_assembler_LDADD = $(top_builddir)/azdora/azdora-assembler.o \
 	$(top_builddir)/azdora/azdora-cbor_encoder.o \
 	$(top_builddir)/azdora/azdora-metadata.o \
-	$(top_builddir)/azdora/azdora-config.o $(LDADD)
+	$(top_builddir)/azdora/azdora-config.o \
+	$(top_builddir)/azdora/azdora-packer_tar_gzip.o $(LDADD)
+
+test_tar_gzip_SOURCES = test_tar_gzip.c ../unity/unity.c
+test_tar_gzip_LDADD = $(top_builddir)/azdora/azdora-packer_tar_gzip.o \
+	$(top_builddir)/piadina/piadina-extractor_tar_gzip.o \
+	$(top_builddir)/piadina/piadina-archive.o $(LDADD)

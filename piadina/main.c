@@ -12,6 +12,7 @@
  * extraction, and process launching.
  */
 #include <errno.h>
+#include <inttypes.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,6 +23,7 @@
 
 #include "piadina_config.h"
 #include "config.h"
+#include "archive.h"
 #include "common/footer.h"
 #include "common/log.h"
 #include "common/platform.h"
@@ -30,6 +32,12 @@
 /* Maximum path length for self exe path */
 #define MAX_PATH_SIZE 4096
 
+static int launch_test_process(const piadina_config_t *config);
+static int extract_archive_from_footer(int fd,
+                                       const piadina_footer_t *footer,
+                                       char *out_dir,
+                                       size_t out_dir_len);
+static void debug_log_metadata(int fd, const piadina_footer_t *footer);
 
 /**
  * Print version information.
@@ -40,27 +48,95 @@ static void print_version(void)
     fprintf(stderr, "Footer layout version: %d\n", PIADINA_FOOTER_LAYOUT_VERSION);
 }
 
+static void debug_log_metadata(int fd, const piadina_footer_t *footer)
+{
+    if (!footer || footer->metadata_size == 0) {
+        return;
+    }
+
+    uint8_t buf[256];
+    off_t rc = lseek(fd, (off_t)footer->metadata_offset, SEEK_SET);
+    if (rc < 0) {
+        log_debug("metadata: seek failed for debug dump");
+        return;
+    }
+
+    size_t dump_len = footer->metadata_size < sizeof(buf) ? (size_t)footer->metadata_size : sizeof(buf);
+    ssize_t n = read(fd, buf, dump_len);
+    if (n <= 0) {
+        log_debug("metadata: read failed for debug dump");
+        return;
+    }
+
+    log_debug("metadata: size=%" PRIu64 " bytes, showing first %zd bytes",
+              footer->metadata_size, n);
+    char line[3 * 16 + 1];
+    size_t offset = 0;
+    while (offset < (size_t)n) {
+        size_t chunk = ((size_t)n - offset) < 16 ? ((size_t)n - offset) : 16;
+        char *p = line;
+        for (size_t i = 0; i < chunk; ++i) {
+            p += sprintf(p, "%02x ", buf[offset + i]);
+        }
+        *p = '\0';
+        log_debug("  %04zx: %s", offset, line);
+        offset += chunk;
+    }
+}
+
+
+static int extract_archive_from_footer(int fd,
+                                       const piadina_footer_t *footer,
+                                       char *out_dir,
+                                       size_t out_dir_len)
+{
+    if (!footer || footer->archive_size == 0) {
+        log_error("no archive payload present");
+        return PIADINA_EXIT_EXTRACTION_ERROR;
+    }
+
+    if (out_dir_len < sizeof("/tmp/piadina_payload_XXXXXX")) {
+        log_error("extraction path buffer too small");
+        return PIADINA_EXIT_EXTRACTION_ERROR;
+    }
+
+    char tmpl[] = "/tmp/piadina_payload_XXXXXX";
+    char *dir = mkdtemp(tmpl);
+    if (!dir) {
+        log_error("failed to create extraction directory: %s", strerror(errno));
+        return PIADINA_EXIT_EXTRACTION_ERROR;
+    }
+
+    snprintf(out_dir, out_dir_len, "%s", dir);
+    log_info("extracting archive to %s (offset=%" PRIu64 ", size=%" PRIu64 ")",
+             out_dir, footer->archive_offset, footer->archive_size);
+
+    piadina_archive_result_t arc_rc = piadina_archive_extract("tar+gzip",
+                                                              fd,
+                                                              footer->archive_offset,
+                                                              footer->archive_size,
+                                                              out_dir);
+    if (arc_rc != PIADINA_ARCHIVE_OK) {
+        log_error("archive extraction failed: %s",
+                  piadina_archive_result_to_string(arc_rc));
+        return PIADINA_EXIT_EXTRACTION_ERROR;
+    }
+
+    log_info("extraction completed");
+    return PIADINA_EXIT_SUCCESS;
+}
 
 /**
  * Launch a child process and wait for it to complete.
  *
- * For milestone 5, this is a temporary implementation that launches a
- * hard-coded test command (/bin/echo) to validate the process launch
- * infrastructure. In later milestones, this will be replaced with the
- * real entry point from metadata.
- *
- * @param config    Parsed launcher configuration
- * @return Child exit code, or launcher error code on failure
+ * For milestone 5/7 test mode, this launches a hard-coded /bin/echo to
+ * validate process launch infrastructure when no payload/footer exists.
  */
 static int launch_test_process(const piadina_config_t *config)
 {
-    /*
-     * For milestone 5, we use a hard-coded test entry point.
-     * This validates the fork+execve infrastructure.
-     */
     const char *entry_point = "/bin/echo";
     const char *test_args[] = {
-        "echo",  /* argv[0] = basename of entry point */
+        "echo",
         "Piadina: test process launched successfully!",
         NULL
     };
@@ -68,37 +144,22 @@ static int launch_test_process(const piadina_config_t *config)
     log_debug("launching test process: %s", entry_point);
 
     pid_t pid = fork();
-
     if (pid < 0) {
-        /* Fork failed */
         log_error("fork failed: %s", strerror(errno));
         return PIADINA_EXIT_LAUNCH_ERROR;
     }
 
     if (pid == 0) {
-        /* Child process */
-        
-        /* Add application arguments if any */
         if (config->app_argc > 0) {
             log_debug("child: ignoring %d app args for test", config->app_argc);
         }
-
-        /*
-         * Execute the test program.
-         * In later milestones, this will use the real entry point and
-         * properly constructed argv/envp.
-         */
         execv(entry_point, (char * const *)test_args);
-
-        /* execv only returns on error */
         log_error("execv failed: %s", strerror(errno));
         _exit(PIADINA_EXIT_LAUNCH_ERROR);
     }
 
-    /* Parent process - wait for child */
     int status;
     pid_t waited_pid;
-
     do {
         waited_pid = waitpid(pid, &status, 0);
     } while (waited_pid < 0 && errno == EINTR);
@@ -120,7 +181,6 @@ static int launch_test_process(const piadina_config_t *config)
         return 128 + signum;
     }
 
-    /* Should not reach here under normal circumstances */
     log_warn("unexpected child termination status: 0x%x", status);
     return PIADINA_EXIT_LAUNCH_ERROR;
 }
@@ -135,6 +195,7 @@ int main(int argc, char **argv)
     int fd = -1;
     const char *error_msg = NULL;
     config_result_t cfg_result;
+    char extract_dir[MAX_PATH_SIZE] = {0};
 
     /* Initialize configuration with defaults */
     config_init(&config);
@@ -200,12 +261,6 @@ int main(int argc, char **argv)
     /* Read and validate footer */
     footer_result_t footer_result = footer_read(fd, &footer);
     if (footer_result != FOOTER_OK) {
-        /*
-         * For a plain launcher binary without embedded payload,
-         * we expect footer_read to fail (bad magic).
-         * In milestone 5, we treat this as acceptable for testing
-         * the process launch infrastructure.
-         */
         if (config.action == CONFIG_ACTION_PRINT_FOOTER ||
             config.action == CONFIG_ACTION_PRINT_METADATA) {
             log_error("no valid footer found: %s",
@@ -216,17 +271,15 @@ int main(int argc, char **argv)
 
         log_warn("no valid footer found: %s (running in test mode)",
                  footer_result_to_string(footer_result));
-
-        /*
-         * For milestone 5 testing: proceed with test process launch
-         * even without a valid footer. This allows testing the
-         * launcher skeleton before Azdora produces real binaries.
-         */
         result = launch_test_process(&config);
         goto cleanup;
     }
 
-    log_info("footer read successfully (layout version %u)", footer.layout_version);
+    if (log_get_level() == LOG_LEVEL_DEBUG) {
+        log_debug("footer:");
+        footer_print(&footer, stderr);
+        debug_log_metadata(fd, &footer);
+    }
 
     /* Handle print-footer action */
     if (config.action == CONFIG_ACTION_PRINT_FOOTER) {
@@ -238,13 +291,10 @@ int main(int argc, char **argv)
 
     /* Handle print-metadata action */
     if (config.action == CONFIG_ACTION_PRINT_METADATA) {
-        /*
-         * TODO: In milestone 8, implement metadata decoding and printing.
-         * For now, just print basic info.
-         */
         fprintf(stderr, "Metadata block at offset %lu, size %lu bytes\n",
                 (unsigned long)footer.metadata_offset,
                 (unsigned long)footer.metadata_size);
+        debug_log_metadata(fd, &footer);
         fprintf(stderr, "(Full metadata decoding not yet implemented)\n");
         result = PIADINA_EXIT_SUCCESS;
         goto cleanup;
@@ -252,16 +302,10 @@ int main(int argc, char **argv)
 
     /*
      * Normal operation (CONFIG_ACTION_RUN):
-     * In later milestones, this will:
-     * 1. Decode metadata
-     * 2. Resolve context (cache root, payload root, etc.)
-     * 3. Extract payload if needed
-     * 4. Launch the entry point
-     *
-     * For milestone 5, we launch a test process to validate the
-     * process launch infrastructure.
+     * Milestone 7: extract the embedded tar+gzip archive to a temp directory.
+     * Future milestones will decode metadata, resolve context, and launch.
      */
-    result = launch_test_process(&config);
+    result = extract_archive_from_footer(fd, &footer, extract_dir, sizeof(extract_dir));
 
 cleanup:
     if (fd >= 0) {

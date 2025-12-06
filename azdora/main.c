@@ -86,7 +86,9 @@ int main(int argc, char **argv)
         goto cleanup;
     }
 
-    printf("[azdora] wrote %s\n", config.output_path);
+    if (!config.quiet) {
+        printf("[azdora] wrote %s\n", config.output_path);
+    }
 
 cleanup:
     azdora_metadata_destroy(&metadata);

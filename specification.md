@@ -64,8 +64,8 @@ This section defines the contract between Azdora (the writer) and Piadina (the r
 The distributed binary is a concatenation of 4 parts:
 
 1.  **Launcher executable** (ELF).
-2.  **Metadata** (CBOR).
-3.  **Archive** (gzip-compressed tarball).
+2.  **Archive** (gzip-compressed tarball).
+3.  **Metadata** (CBOR).
 4.  **Footer** (Fixed-size).
 
 All offsets in the footer are relative to the start of the file.
@@ -75,8 +75,8 @@ All offsets in the footer are relative to the start of the file.
 From beginning to end, the file is:
 
 - `[0 .. launcher_size-1]` – Launcher executable image.
-- `[launcher_size .. launcher_size + metadata_size - 1]` – CBOR metadata blob.
-- `[launcher_size + metadata_size .. launcher_size + metadata_size + parchive_size - 1]` – Archive (tar+gzip, i.e. the compressed payload).
+- `[launcher_size .. launcher_size + archive_size - 1]` – Archive (tar+gzip, i.e. the compressed payload).
+- `[launcher_size + archive_size .. launcher_size + archive_size + metadata_size - 1]` – CBOR metadata blob.
 - `[end - FOOTER_SIZE .. end - 1]` – Footer with magic, offsets, sizes, hashes, format.
 
 ##### 3.1.2 Footer Structure (Conceptual)
@@ -1330,13 +1330,13 @@ Planned development phases for Piadina and Azdora as a combined project. Each mi
 
 7. **Tar integration via libarchive (skipping payload hashing for now)**
    - **Implementation**:
-     - Define the shared tar interfaces `common/tar_encoder.{c,h}` and `common/tar_decoder.{c,h}` (signatures and error model) without providing a full in-tree implementation yet.
      - Implement `piadina/extractor_tar_gzip.{c,h}` to:
        - Use `libarchive` to read tar+gzip streams from the launcher file and extract them into a target directory.
        - Map `libarchive` errors to project-specific error codes.
      - Implement `azdora/packer_tar_gzip.{c,h}` to:
        - Use `libarchive` to create tar+gzip archives from a payload directory tree.
        - Integrate with `azdora/assembler.{c,h}` so that the archive block in the final binary is produced via `libarchive`.
+     - The shared tar abstraction (`common/tar_encoder` / `common/tar_decoder`) is deferred to milestone 15, when the in-tree tar implementation will land. No interface is frozen in milestone 7.
    - **Expected output**:
      - Azdora can now produce binaries whose archive stream matches the spec, and Piadina can extract those archives using `libarchive` through the `extractor_tar_gzip` module.
    - **Testing**:

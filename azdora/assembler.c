@@ -21,14 +21,24 @@
 #include "common/crypto.h"
 #include "common/footer.h"
 #include "metadata.h"
+#include "packer_tar_gzip.h"
 
 #define COPY_BUFFER_SIZE 4096
 
 static int copy_fd(int src_fd, int dst_fd);
-static azdora_assembler_result_t write_metadata_and_footer(int out_fd,
-                                                           uint64_t launcher_size,
-                                                           const azdora_metadata_t *metadata,
-                                                           bool verbose);
+static azdora_assembler_result_t write_metadata_block(int out_fd,
+                                                      const azdora_metadata_t *metadata,
+                                                      bool verbose,
+                                                      uint64_t *metadata_size_out,
+                                                      uint8_t metadata_hash_out[32]);
+static azdora_assembler_result_t write_footer_block(int out_fd,
+                                                    uint64_t launcher_size,
+                                                    uint64_t metadata_size,
+                                                    uint64_t archive_size,
+                                                    const uint8_t archive_hash[32],
+                                                    const uint8_t metadata_hash[32],
+                                                    bool verbose);
+static bool compute_hash_region(int fd, uint64_t offset, uint64_t size, uint8_t out_hash[32]);
 
 azdora_assembler_result_t azdora_assembler_build(const azdora_config_t *config,
                                                  const azdora_metadata_t *metadata)
@@ -51,10 +61,14 @@ azdora_assembler_result_t azdora_assembler_build(const azdora_config_t *config,
         return AZDORA_ASSEMBLER_ERR_READ_LAUNCHER;
     }
 
-    out_fd = open(config->output_path, O_CREAT | O_TRUNC | O_WRONLY, 0755);
+    out_fd = open(config->output_path, O_CREAT | O_TRUNC | O_RDWR, 0755);
     if (out_fd < 0) {
         close(in_fd);
         return AZDORA_ASSEMBLER_ERR_OPEN_OUTPUT;
+    }
+
+    if (config->verbose) {
+        fprintf(stderr, "[azdora] writing launcher from %s\n", config->launcher_path);
     }
 
     if (copy_fd(in_fd, out_fd) != 0) {
@@ -66,10 +80,84 @@ azdora_assembler_result_t azdora_assembler_build(const azdora_config_t *config,
 
     close(in_fd);
 
-    azdora_assembler_result_t rc = write_metadata_and_footer(out_fd,
-                                                             (uint64_t)st.st_size,
-                                                             metadata,
-                                                             config->verbose);
+    uint64_t archive_size = 0;
+    off_t archive_offset = lseek(out_fd, 0, SEEK_END);
+    if (config->verbose) {
+        fprintf(stderr, "[azdora] packing archive from %s\n", config->payload_dir);
+    }
+
+    packer_tar_gzip_result_t pack_rc =
+        packer_tar_gzip_write(config->payload_dir, out_fd, &archive_size,
+                              config->verbose, config->quiet);
+    if (pack_rc != PACKER_TGZ_OK) {
+        fprintf(stderr, "[azdora] tar+gzip pack failed: %s\n",
+                packer_tar_gzip_result_to_string(pack_rc));
+        close(out_fd);
+        unlink(config->output_path);
+        return AZDORA_ASSEMBLER_ERR_PACK_ARCHIVE;
+    }
+
+    if (config->verbose) {
+        fprintf(stderr, "[azdora] packing completed\n");
+    }
+
+    off_t archive_end = lseek(out_fd, 0, SEEK_END);
+    if (archive_size == 0 && archive_end != (off_t)-1 && archive_offset != (off_t)-1) {
+        archive_size = (uint64_t)(archive_end - archive_offset);
+    }
+    if (archive_size == 0 || archive_offset < 0) {
+        close(out_fd);
+        unlink(config->output_path);
+        return AZDORA_ASSEMBLER_ERR_PACK_ARCHIVE;
+    }
+
+    uint8_t archive_hash[32];
+    if (!compute_hash_region(out_fd, (uint64_t)archive_offset, archive_size, archive_hash)) {
+        close(out_fd);
+        unlink(config->output_path);
+        return AZDORA_ASSEMBLER_ERR_PACK_ARCHIVE;
+    }
+
+    if (lseek(out_fd, 0, SEEK_END) < 0) {
+        close(out_fd);
+        unlink(config->output_path);
+        return AZDORA_ASSEMBLER_ERR_PACK_ARCHIVE;
+    }
+
+    azdora_metadata_t mutable_md = *metadata;
+    const char *set_err = NULL;
+    azdora_metadata_result_t set_rc = azdora_metadata_set_field_bytes(&mutable_md,
+                                                                      METADATA_FIELD_ARCHIVE_HASH,
+                                                                      archive_hash,
+                                                                      sizeof(archive_hash),
+                                                                      &set_err);
+    if (set_rc != AZDORA_METADATA_OK) {
+        close(out_fd);
+        unlink(config->output_path);
+        return AZDORA_ASSEMBLER_ERR_METADATA_ENCODE;
+    }
+
+    uint64_t metadata_size = 0;
+    uint8_t metadata_hash[32];
+
+    azdora_assembler_result_t rc = write_metadata_block(out_fd,
+                                                        &mutable_md,
+                                                        config->verbose,
+                                                        &metadata_size,
+                                                        metadata_hash);
+    if (rc != AZDORA_ASSEMBLER_OK) {
+        close(out_fd);
+        unlink(config->output_path);
+        return rc;
+    }
+
+    rc = write_footer_block(out_fd,
+                            (uint64_t)st.st_size,
+                            metadata_size,
+                            archive_size,
+                            archive_hash,
+                            metadata_hash,
+                            config->verbose);
     close(out_fd);
 
     if (rc != AZDORA_ASSEMBLER_OK) {
@@ -97,6 +185,8 @@ const char *azdora_assembler_result_to_string(azdora_assembler_result_t result)
         return "failed to write output";
     case AZDORA_ASSEMBLER_ERR_METADATA_ENCODE:
         return "metadata encode failed";
+    case AZDORA_ASSEMBLER_ERR_PACK_ARCHIVE:
+        return "archive packing failed";
     case AZDORA_ASSEMBLER_ERR_FOOTER:
         return "footer append failed";
     default:
@@ -125,13 +215,14 @@ static int copy_fd(int src_fd, int dst_fd)
     return (n < 0) ? -1 : 0;
 }
 
-static azdora_assembler_result_t write_metadata_and_footer(int out_fd,
-                                                           uint64_t launcher_size,
-                                                           const azdora_metadata_t *metadata,
-                                                           bool verbose)
+static azdora_assembler_result_t write_metadata_block(int out_fd,
+                                                      const azdora_metadata_t *metadata,
+                                                      bool verbose,
+                                                      uint64_t *metadata_size_out,
+                                                      uint8_t metadata_hash_out[32])
 {
     if (verbose) {
-        fprintf(stderr, "[azdora] metadata:\n");
+        fprintf(stderr, "[azdora] writing metadata:\n");
         azdora_metadata_print(metadata, stderr);
     }
 
@@ -145,44 +236,45 @@ static azdora_assembler_result_t write_metadata_and_footer(int out_fd,
         return AZDORA_ASSEMBLER_ERR_METADATA_ENCODE;
     }
 
-    uint8_t metadata_hash[32];
-    if (!crypto_sha256(metadata_buf, metadata_size, metadata_hash)) {
+    if (!crypto_sha256(metadata_buf, metadata_size, metadata_hash_out)) {
         free(metadata_buf);
         return AZDORA_ASSEMBLER_ERR_METADATA_ENCODE;
     }
 
-    /* Write metadata block */
     ssize_t written = write(out_fd, metadata_buf, metadata_size);
+    free(metadata_buf);
     if (written < 0 || (size_t)written != metadata_size) {
-        free(metadata_buf);
         return AZDORA_ASSEMBLER_ERR_WRITE_OUTPUT;
     }
-    free(metadata_buf);
 
-    /* Prepare footer */
+    if (metadata_size_out) {
+        *metadata_size_out = (uint64_t)metadata_size;
+    }
+    return AZDORA_ASSEMBLER_OK;
+}
+
+static azdora_assembler_result_t write_footer_block(int out_fd,
+                                                    uint64_t launcher_size,
+                                                    uint64_t metadata_size,
+                                                    uint64_t archive_size,
+                                                    const uint8_t archive_hash[32],
+                                                    const uint8_t metadata_hash[32],
+                                                    bool verbose)
+{
     piadina_footer_t footer;
     footer_prepare(&footer);
-    footer.metadata_offset = launcher_size;
-    footer.metadata_size = (uint64_t)metadata_size;
-    footer.archive_offset = footer.metadata_offset + footer.metadata_size;
-    footer.archive_size = 0; /* Placeholder archive */
-    memcpy(footer.metadata_hash, metadata_hash, sizeof(metadata_hash));
+    footer.archive_offset = launcher_size;
+    footer.archive_size = archive_size;
+    footer.metadata_offset = launcher_size + archive_size;
+    footer.metadata_size = metadata_size;
+    memcpy(footer.metadata_hash, metadata_hash, 32);
 
-    /* Set archive hash (bytes) from metadata */
-    size_t hash_len = 0;
-    const uint8_t *hash_bytes = NULL;
-    azdora_metadata_result_t hash_rc = azdora_metadata_get_bytes(metadata,
-                                                                 METADATA_FIELD_ARCHIVE_HASH,
-                                                                 &hash_bytes,
-                                                                 &hash_len,
-                                                                 NULL);
-    if (hash_rc == AZDORA_METADATA_OK && hash_bytes && hash_len >= sizeof(footer.archive_hash)) {
-        memcpy(footer.archive_hash, hash_bytes, sizeof(footer.archive_hash));
+    if (archive_hash) {
+        memcpy(footer.archive_hash, archive_hash, sizeof(footer.archive_hash));
     } else {
         memset(footer.archive_hash, 0, sizeof(footer.archive_hash));
     }
 
-    /* Compute footer hash (covers entire footer with footer_hash zeroed) */
     piadina_footer_t footer_for_hash = footer;
     memset(footer_for_hash.footer_hash, 0, sizeof(footer_for_hash.footer_hash));
     if (!crypto_sha256((const uint8_t *)&footer_for_hash,
@@ -192,7 +284,7 @@ static azdora_assembler_result_t write_metadata_and_footer(int out_fd,
     }
 
     if (verbose) {
-        fprintf(stderr, "[azdora] footer:\n");
+        fprintf(stderr, "[azdora] writing footer:\n");
         footer_print(&footer, stderr);
     }
 
@@ -202,4 +294,33 @@ static azdora_assembler_result_t write_metadata_and_footer(int out_fd,
     }
 
     return AZDORA_ASSEMBLER_OK;
+}
+
+static bool compute_hash_region(int fd, uint64_t offset, uint64_t size, uint8_t out_hash[32])
+{
+    if (fd < 0 || !out_hash) {
+        return false;
+    }
+    off_t rc = lseek(fd, (off_t)offset, SEEK_SET);
+    if (rc < 0) {
+        return false;
+    }
+
+    crypto_sha256_ctx ctx;
+    crypto_sha256_init(&ctx);
+    uint8_t buffer[COPY_BUFFER_SIZE];
+    uint64_t remaining = size;
+    while (remaining > 0) {
+        size_t to_read = remaining < sizeof(buffer) ? (size_t)remaining : sizeof(buffer);
+        ssize_t n = read(fd, buffer, to_read);
+        if (n <= 0) {
+            return false;
+        }
+        if (!crypto_sha256_update(&ctx, buffer, (size_t)n)) {
+            return false;
+        }
+        remaining -= (uint64_t)n;
+    }
+
+    return crypto_sha256_final(&ctx, out_hash);
 }
