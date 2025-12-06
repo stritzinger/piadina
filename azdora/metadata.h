@@ -16,6 +16,7 @@
 #include <stdio.h>
 
 #include "common/metadata_core.h"
+#include "common/metadata_tree.h"
 
 typedef enum {
     AZDORA_METADATA_OK = 0,
@@ -27,51 +28,20 @@ typedef enum {
     AZDORA_METADATA_ERR_OUT_OF_MEMORY
 } azdora_metadata_result_t;
 
-typedef enum {
-    AZDORA_META_STRING = 0,
-    AZDORA_META_UINT,
-    AZDORA_META_BOOL,
-    AZDORA_META_BYTES,
-    AZDORA_META_ARRAY,
-    AZDORA_META_MAP
-} azdora_meta_type_t;
-
-struct azdora_meta_value;
-
-typedef struct {
-    size_t count;
-    size_t capacity;
-    struct azdora_meta_value *items; /* owned array */
-} azdora_meta_array_t;
+typedef metadata_tree_type_t azdora_meta_type_t;
+typedef metadata_tree_value_t azdora_meta_value_t;
+typedef metadata_tree_array_t azdora_meta_array_t;
+typedef metadata_tree_map_t azdora_meta_map_t;
+typedef metadata_tree_map_entry_t azdora_meta_map_entry_t;
+#define AZDORA_META_STRING METADATA_TREE_STRING
+#define AZDORA_META_UINT METADATA_TREE_UINT
+#define AZDORA_META_BOOL METADATA_TREE_BOOL
+#define AZDORA_META_BYTES METADATA_TREE_BYTES
+#define AZDORA_META_ARRAY METADATA_TREE_ARRAY
+#define AZDORA_META_MAP METADATA_TREE_MAP
 
 typedef struct {
-    char *key;                        /* owned */
-    struct azdora_meta_value *value;  /* owned */
-} azdora_meta_map_entry_t;
-
-typedef struct {
-    size_t count;
-    size_t capacity;
-    azdora_meta_map_entry_t *entries; /* owned array */
-} azdora_meta_map_t;
-
-typedef struct azdora_meta_value {
-    azdora_meta_type_t type;
-    union {
-        char *str; /* owned */
-        uint64_t uint_val;
-        bool bool_val;
-        struct {
-            uint8_t *data; /* owned */
-            size_t len;
-        } bytes;
-        azdora_meta_array_t array;
-        azdora_meta_map_t map;
-    } as;
-} azdora_meta_value_t;
-
-typedef struct {
-    azdora_meta_map_t root; /* top-level metadata map */
+    metadata_tree_map_t root; /* top-level metadata map */
 } azdora_metadata_t;
 
 /**

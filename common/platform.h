@@ -11,6 +11,19 @@
 #define PIADINA_COMMON_PLATFORM_H
 
 #include <stddef.h>
+#include <limits.h>
+
+/*
+ * Safe path buffer size: prefer PATH_MAX when available, otherwise fall back
+ * to 4096. Shared so callers avoid duplicating magic numbers.
+ */
+#ifndef PLATFORM_PATH_MAX
+#ifdef PATH_MAX
+#define PLATFORM_PATH_MAX PATH_MAX
+#else
+#define PLATFORM_PATH_MAX 4096
+#endif
+#endif
 
 typedef enum {
     PLATFORM_OK = 0,

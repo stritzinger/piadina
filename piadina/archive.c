@@ -15,6 +15,8 @@
 
 #define ARCHIVE_FORMAT_TAR_GZIP "tar+gzip"
 
+/* Exported Functions */
+
 int piadina_archive_format_supported(const char *format)
 {
     if (!format || strcmp(format, ARCHIVE_FORMAT_TAR_GZIP) == 0) {

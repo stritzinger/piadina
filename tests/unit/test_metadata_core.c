@@ -25,9 +25,6 @@ static void test_field_lookup_and_required(void)
     TEST_ASSERT_EQUAL(METADATA_FIELD_VERSION, field);
     TEST_ASSERT_TRUE(metadata_core_field_required(field));
 
-    TEST_ASSERT_TRUE(metadata_core_field_lookup("LOG_LEVEL", 9, &field));
-    TEST_ASSERT_FALSE(metadata_core_field_required(field));
-
     TEST_ASSERT_FALSE(metadata_core_field_lookup("missing", 7, &field));
     TEST_ASSERT_EQUAL(METADATA_FIELD_UNKNOWN, field);
 }
@@ -59,14 +56,12 @@ static void test_field_default_strings(void)
                              metadata_core_field_default_string(METADATA_FIELD_ARCHIVE_FORMAT));
     TEST_ASSERT_EQUAL_STRING("{HOME}/.piadina/cache",
                              metadata_core_field_default_string(METADATA_FIELD_CACHE_ROOT));
-    TEST_ASSERT_EQUAL_STRING("{CACHE_ROOT}/{PAYLOAD_HASH}",
+    TEST_ASSERT_EQUAL_STRING("{CACHE_ROOT}/{ARCHIVE_HASH}",
                              metadata_core_field_default_string(METADATA_FIELD_PAYLOAD_ROOT));
     TEST_ASSERT_EQUAL_STRING("oncrash",
                              metadata_core_field_default_string(METADATA_FIELD_CLEANUP_POLICY));
     TEST_ASSERT_EQUAL_STRING("false",
                              metadata_core_field_default_string(METADATA_FIELD_VALIDATE));
-    TEST_ASSERT_EQUAL_STRING("info",
-                             metadata_core_field_default_string(METADATA_FIELD_LOG_LEVEL));
     TEST_ASSERT_EQUAL_PTR(NULL,
                           metadata_core_field_default_string(METADATA_FIELD_ENV));
     TEST_ASSERT_EQUAL_PTR(NULL,

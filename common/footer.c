@@ -19,10 +19,14 @@
 #define SEEK_END 2
 #endif
 
+/* Internal Prototypes */
+
 static bool add_overflow(uint64_t a, uint64_t b, uint64_t *out);
 static footer_result_t footer_validate_ranges(const piadina_footer_t *footer,
                                               uint64_t content_size,
                                               bool require_archive_exact);
+
+/* Exported Functions */
 
 footer_result_t footer_read(int fd, piadina_footer_t *out_footer)
 {

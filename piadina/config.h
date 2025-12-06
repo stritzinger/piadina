@@ -66,9 +66,12 @@ typedef struct {
 
     /* Configuration values (NULL cache_root means use metadata default) */
     char *cache_root;                           /* Owned, dynamically allocated */
+    bool cache_root_set;
     metadata_core_cleanup_policy_t cleanup_policy;
+    bool cleanup_policy_set;
     log_level_t log_level;
     bool validate;
+    bool validate_set;
     bool force_extract;
 
     /* Application arguments (non-launcher args + args after --) */

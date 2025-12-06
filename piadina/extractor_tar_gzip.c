@@ -28,6 +28,8 @@
 
 #define EXTRACT_READ_BLOCK (64 * 1024)
 
+/* Internal Prototypes */
+
 typedef struct {
     int fd;
     uint64_t remaining;
@@ -39,6 +41,8 @@ static la_int64_t archive_skip_cb(struct archive *a, void *client_data, la_int64
 static tar_result_t ensure_directory(const char *path);
 static tar_result_t join_under_root(const char *root, const char *relative, char **out_full);
 static bool path_component_safe(const char *path);
+
+/* Exported Functions */
 
 tar_result_t extractor_tar_gzip_extract(int fd,
                                         uint64_t offset,
@@ -124,6 +128,8 @@ cleanup:
     }
     return result;
 }
+
+/* Internal Functions */
 
 static ssize_t archive_read_cb(struct archive *a, void *client_data, const void **buff)
 {

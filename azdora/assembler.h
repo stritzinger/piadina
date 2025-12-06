@@ -53,4 +53,10 @@ azdora_assembler_result_t azdora_assembler_build(const azdora_config_t *config,
  */
 const char *azdora_assembler_result_to_string(azdora_assembler_result_t result);
 
+/**
+ * @brief Normalize ENTRY_POINT; convert absolute inside payload to relative, reject outside.
+ */
+azdora_assembler_result_t normalize_entry_point(const azdora_config_t *config,
+                                                azdora_metadata_t *metadata);
+
 #endif /* AZDORA_ASSEMBLER_H */

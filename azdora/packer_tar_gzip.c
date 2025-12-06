@@ -23,7 +23,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+/* Internal Prototypes */
+
 #define PACKER_READ_BLOCK (64 * 1024)
+
+/* Internal Functions */
 
 static int fts_path_compare(const FTSENT **a, const FTSENT **b);
 static packer_tar_gzip_result_t copy_regular_file(struct archive *archive,
@@ -39,6 +43,8 @@ static bool symlink_resolves_within_root(const char *root_real,
 static bool path_has_prefix(const char *path, const char *prefix);
 static uint64_t compute_total_size(const char *root_real, packer_tar_gzip_result_t *out_rc);
 static void maybe_print_progress(uint64_t done, uint64_t total, int *last_percent);
+
+/* Exported Functions */
 
 packer_tar_gzip_result_t packer_tar_gzip_write(const char *payload_root,
                                                int out_fd,

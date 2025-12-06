@@ -558,89 +558,89 @@ Mark items as you complete them.
 
 ### Piadina metadata decode (`piadina/cbor_decode.{c,h}` and `piadina/metadata.{c,h}`)
 
-- [ ] **Launcher-side metadata struct**
-  - [ ] Define `struct piadina_metadata` with fields for:
-    - [ ] All top-level scalars (`VERSION`, `APP_NAME`, etc.).
-    - [ ] Arrays (`ENTRY_ARGS`, `ENTRY_ARGS_POST`).
-    - [ ] Maps (`ENV`, user-defined maps, etc.).
+- [x] **Launcher-side metadata struct**
+  - [x] Define `struct piadina_metadata` with fields for:
+    - [x] All top-level scalars (`VERSION`, `APP_NAME`, etc.).
+    - [x] Arrays (`ENTRY_ARGS`, `ENTRY_ARGS_POST`).
+    - [x] Maps (`ENV`, user-defined maps, etc.).
 
-- [ ] **CBOR decode implementation**
-  - [ ] Implement schema-aware decoder:
-    - [ ] Decode top-level map.
-    - [ ] Validate field names via `metadata_core`.
-    - [ ] Enforce presence/absence of required/optional fields.
-    - [ ] Apply defaults for missing optional fields.
-  - [ ] Enforce `"VERSION"` compatibility:
-    - [ ] Accept only the schema version compiled into the launcher.
-    - [ ] Reject missing, lower, or higher versions with a clear error.
+- [x] **CBOR decode implementation**
+  - [x] Implement schema-aware decoder:
+    - [x] Decode top-level map.
+    - [x] Validate field names via `metadata_core`.
+    - [x] Enforce presence/absence of required/optional fields.
+    - [x] Apply defaults for missing optional fields.
+  - [x] Enforce `"VERSION"` compatibility:
+    - [x] Accept only the schema version compiled into the launcher.
+    - [x] Reject missing, lower, or higher versions with a clear error.
 
 ### Azdora metadata build/encode (`azdora/metadata.{c,h}`, `azdora/cbor_encode.{c,h}`)
 
-- [ ] **Metadata representation (builder side)**
-  - [ ] Extend Azdora’s metadata structure to fully represent:
-    - [ ] Top-level fields.
-    - [ ] Arrays (`ENTRY_ARGS`, `ENTRY_ARGS_POST`).
-  - [ ] Maps (`ENV`, user-defined maps, and future maps).
+- [x] **Metadata representation (builder side)**
+  - [x] Extend Azdora’s metadata structure to fully represent:
+    - [x] Top-level fields.
+    - [x] Arrays (`ENTRY_ARGS`, `ENTRY_ARGS_POST`).
+    - [x] Maps (`ENV`, user-defined maps, and future maps).
 
-- [ ] **`--meta` key-path parsing**
-  - [ ] Implement parsing for:
-    - [ ] Top-level scalars: `KEY=VALUE`.
-    - [ ] Maps: `MAP.KEY=VALUE`.
-    - [ ] Arrays:
-      - [ ] Indexed: `ARRAY[INDEX]=VALUE`.
-      - [ ] Append: `ARRAY[]=VALUE`.
-  - [ ] Enforce dense 0-based indexing for arrays:
-    - [ ] Reject configurations with holes (e.g. `ENTRY_ARGS[10]` without 0–9).
+- [x] **`--meta` key-path parsing**
+  - [x] Implement parsing for:
+    - [x] Top-level scalars: `KEY=VALUE`.
+    - [x] Maps: `MAP.KEY=VALUE`.
+    - [x] Arrays:
+      - [x] Indexed: `ARRAY[INDEX]=VALUE`.
+      - [x] Append: `ARRAY[]=VALUE`.
+  - [x] Enforce dense 0-based indexing for arrays:
+    - [x] Reject configurations with holes (e.g. `ENTRY_ARGS[10]` without 0–9).
 
-- [ ] **Typed values support**
-  - [ ] Implement value-type prefixes:
-    - [ ] Unsigned integer: `u:VALUE`.
-    - [ ] Boolean: `b:true` / `b:false`.
-    - [ ] Byte strings: `hex:...` and `b64:...`.
-  - [ ] Map them to correct CBOR types in `cbor_encode`.
+- [x] **Typed values support**
+  - [x] Implement value-type prefixes:
+    - [x] Unsigned integer: `u:VALUE`.
+    - [x] Boolean: `b:true` / `b:false`.
+    - [x] Byte strings: `hex:...` and `b64:...`.
+  - [x] Map them to correct CBOR types in `cbor_encode`.
 
 ### Templating in Piadina (`piadina/template.{c,h}` and `piadina/context.{c,h}`)
 
-- [ ] **Template engine**
-  - [ ] Implement `{VAR}` substitution:
-    - [ ] Gather initial variable set from process environment (`{HOME}`, `{TMPDIR}`, `{UID}`, `{GID}`).
-    - [ ] Add metadata-based variables (`{PAYLOAD_HASH}`, `{ARCHIVE_HASH}`).
-  - [ ] Implement substitution function that:
-    - [ ] Replaces `{VAR}` with value.
-    - [ ] Fails on unknown variables.
+- [x] **Template engine**
+  - [x] Implement `{VAR}` substitution:
+    - [x] Gather initial variable set from process environment (`{HOME}`, `{TMPDIR}`, `{UID}`, `{GID}`).
+    - [x] Add metadata-based variables (`{PAYLOAD_HASH}`, `{ARCHIVE_HASH}`).
+  - [x] Implement substitution function that:
+    - [x] Replaces `{VAR}` with value.
+    - [x] Fails on unknown variables.
 
-- [ ] **Context resolution**
-  - [ ] Define `struct piadina_context` containing:
-    - [ ] Effective `CACHE_ROOT`, `PAYLOAD_ROOT`, `TEMP_DIR`, `LOCK_FILE`, `READY_MARKER`.
-    - [ ] Effective `ENTRY_POINT`, `ENTRY_ARGS`, `CLEANUP_POLICY`, `VALIDATE`, `LOG_LEVEL`.
-    - [ ] Resolved `ENV` and user-defined maps.
-    - [ ] Both:
-      - [ ] Fully expanded runtime values.
-      - [ ] Original template values for `.piadina_env` (for later milestones).
-  - [ ] Implement evaluation order:
-    - [ ] Resolve `CACHE_ROOT` first (from metadata or default `"{HOME}/.piadina/cache"`).
-    - [ ] Export `{CACHE_ROOT}` to template variables.
-    - [ ] Resolve `PAYLOAD_ROOT` next (from metadata or default `"{PAYLOAD_HASH}"` combined with cache root).
-    - [ ] Apply substitution in `ENV` entries last, using all known variables.
+- [x] **Context resolution**
+  - [x] Define `struct piadina_context` containing:
+    - [x] Effective `CACHE_ROOT`, `PAYLOAD_ROOT`, `TEMP_DIR`, `LOCK_FILE`, `READY_MARKER`.
+    - [x] Effective `ENTRY_POINT`, `ENTRY_ARGS`, `CLEANUP_POLICY`, `VALIDATE`, `LOG_LEVEL`.
+    - [x] Resolved `ENV` and user-defined maps.
+    - [x] Both:
+      - [x] Fully expanded runtime values.
+      - [x] Original template values for `.piadina_env` (for later milestones).
+  - [x] Implement evaluation order:
+    - [x] Resolve `CACHE_ROOT` first (from metadata or default `"{HOME}/.piadina/cache"`).
+    - [x] Export `{CACHE_ROOT}` to template variables.
+    - [x] Resolve `PAYLOAD_ROOT` next (from metadata or default `"{PAYLOAD_HASH}"` combined with cache root).
+    - [x] Apply substitution in `ENV` entries last, using all known variables.
 
 ### Tests for milestone 8
 
-- [ ] **Unit tests for metadata decode/encode**
-  - [ ] Round-trip tests for full metadata structures through Azdora encode → Piadina decode.
-  - [ ] Error tests:
-    - [ ] Invalid keys.
-    - [ ] Invalid enum values.
-    - [ ] Missing required fields.
-    - [ ] Version mismatch.
+- [x] **Unit tests for metadata decode/encode**
+  - [x] Round-trip tests for full metadata structures through Azdora encode → Piadina decode.
+  - [x] Error tests:
+    - [x] Invalid keys.
+    - [x] Invalid enum values.
+    - [x] Missing required fields.
+    - [x] Version mismatch.
 
-- [ ] **Unit tests for templating**
-  - [ ] Verify `{VAR}` substitution with system env variables.
-  - [ ] Verify `CACHE_ROOT` and `PAYLOAD_ROOT` resolution order.
-  - [ ] Verify error on unknown variables.
+- [x] **Unit tests for templating**
+  - [x] Verify `{VAR}` substitution with system env variables.
+  - [x] Verify `CACHE_ROOT` and `PAYLOAD_ROOT` resolution order.
+  - [x] Verify error on unknown variables.
 
-- [ ] **Integration tests**
-  - [ ] Use Azdora to create binaries with various `CACHE_ROOT`, `PAYLOAD_ROOT`, and `ENV` configurations.
-  - [ ] Confirm Piadina resolves them as expected.
+- [x] **Integration tests**
+  - [x] Use Azdora to create binaries with various `CACHE_ROOT`, `PAYLOAD_ROOT`, and `ENV` configurations.
+  - [x] Confirm Piadina resolves them as expected.
 
 ---
 

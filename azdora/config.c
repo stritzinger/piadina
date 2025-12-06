@@ -17,6 +17,8 @@
 
 #define DEFAULT_OUTPUT_PATH "output.piadina"
 
+/* Internal Prototypes */
+
 static azdora_config_result_t add_meta_entry(azdora_config_t *config,
                                              const char *value,
                                              const char **error_msg);
@@ -25,6 +27,8 @@ static azdora_config_result_t set_option_value(char **target,
                                                const char **error_msg);
 static const char *next_arg_value(int index, int argc, char **argv, bool *consumed);
 static bool has_prefix(const char *arg, const char *prefix);
+
+/* Exported Functions */
 
 void azdora_config_init(azdora_config_t *config)
 {
@@ -279,9 +283,7 @@ void azdora_config_print_help(const char *program_name)
     fprintf(stderr, "      --version            Show version\n");
 }
 
-/* ------------------------------------------------------------------------- */
-/* Internal helpers                                                          */
-/* ------------------------------------------------------------------------- */
+/* Internal Functions */
 
 static azdora_config_result_t set_option_value(char **target,
                                                const char *value,

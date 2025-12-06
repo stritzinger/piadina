@@ -14,9 +14,13 @@
 
 #include "common/cbor_core.h"
 
+/* Internal Prototypes */
+
 static cbor_core_result_t encode_value(cbor_core_encoder_t *enc, const azdora_meta_value_t *val);
 static cbor_core_result_t encode_map(cbor_core_encoder_t *enc, const azdora_meta_map_t *map);
 static cbor_core_result_t encode_array(cbor_core_encoder_t *enc, const azdora_meta_array_t *array);
+
+/* Exported Functions */
 
 azdora_cbor_result_t azdora_cbor_encode_metadata(const azdora_metadata_t *metadata,
                                                  uint8_t **out_data,
@@ -60,9 +64,7 @@ azdora_cbor_result_t azdora_cbor_encode_metadata(const azdora_metadata_t *metada
     return AZDORA_CBOR_OK;
 }
 
-/* ------------------------------------------------------------------------- */
-/* Internal encoding helpers                                                */
-/* ------------------------------------------------------------------------- */
+/* Internal Functions */
 
 static cbor_core_result_t encode_map(cbor_core_encoder_t *enc, const azdora_meta_map_t *map)
 {

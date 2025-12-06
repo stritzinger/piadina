@@ -16,6 +16,21 @@
 #include "piadina_config.h"
 #include "common/log.h"
 
+/* Internal Prototypes */
+
+static int parse_bool(const char *value);
+static bool is_launcher_option(const char *arg);
+static const char *get_option_name(const char *arg);
+static const char *find_option_value(const char *opt_name);
+static size_t option_name_length(const char *opt_name);
+static bool option_matches(const char *opt_name, const char *target);
+static config_result_t add_app_arg(piadina_config_t *config, char *arg,
+                                   const char **error_msg);
+static config_result_t process_launcher_option(piadina_config_t *config,
+                                               const char *opt_name,
+                                               int i, int argc, char **argv,
+                                               bool *consumed_next,
+                                               const char **error_msg);
 
 /* Environment variable names */
 #define ENV_CACHE_ROOT      "PIADINA_CACHE_ROOT"
@@ -29,6 +44,8 @@
 #define OPT_PREFIX_LEN      11
 
 
+/* Exported Functions */
+
 void config_init(piadina_config_t *config)
 {
     if (!config) {
@@ -37,9 +54,12 @@ void config_init(piadina_config_t *config)
 
     config->action = CONFIG_ACTION_RUN;
     config->cache_root = NULL;  /* NULL means use metadata default */
+    config->cache_root_set = false;
     config->cleanup_policy = metadata_core_cleanup_policy_default();
+    config->cleanup_policy_set = false;
     config->log_level = LOG_LEVEL_WARN;
     config->validate = metadata_core_validate_default();
+    config->validate_set = false;
     config->force_extract = false;
     config->app_argc = 0;
     config->app_argv = NULL;
@@ -61,6 +81,8 @@ void config_destroy(piadina_config_t *config)
     config->app_argc = 0;
 }
 
+
+/* Internal Functions */
 
 /**
  * Parse a boolean value from a string.
@@ -223,6 +245,7 @@ static config_result_t process_launcher_option(piadina_config_t *config,
             }
             return CONFIG_ERR_OUT_OF_MEMORY;
         }
+        config->cache_root_set = true;
         return CONFIG_OK;
     }
 
@@ -245,6 +268,7 @@ static config_result_t process_launcher_option(piadina_config_t *config,
             }
             return CONFIG_ERR_INVALID_VALUE;
         }
+        config->cleanup_policy_set = true;
         return CONFIG_OK;
     }
 
@@ -278,12 +302,14 @@ static config_result_t process_launcher_option(piadina_config_t *config,
                 int parsed = parse_bool(argv[i + 1]);
                 if (parsed >= 0) {
                     config->validate = (parsed == 1);
+                    config->validate_set = true;
                     *consumed_next = true;
                     return CONFIG_OK;
                 }
             }
 
             config->validate = true;
+            config->validate_set = true;
             return CONFIG_OK;
         }
 
@@ -295,6 +321,7 @@ static config_result_t process_launcher_option(piadina_config_t *config,
             return CONFIG_ERR_INVALID_VALUE;
         }
         config->validate = (parsed == 1);
+        config->validate_set = true;
         return CONFIG_OK;
     }
 
@@ -423,6 +450,9 @@ config_result_t config_apply_env(piadina_config_t *config,
             }
             return CONFIG_ERR_OUT_OF_MEMORY;
         }
+    if (config->cache_root) {
+        config->cache_root_set = true;
+    }
     }
 
     /* PIADINA_CLEANUP_POLICY */
@@ -436,6 +466,7 @@ config_result_t config_apply_env(piadina_config_t *config,
             return CONFIG_ERR_INVALID_VALUE;
         }
         config->cleanup_policy = policy;
+        config->cleanup_policy_set = true;
     }
 
     /* PIADINA_LOG_LEVEL */
@@ -462,6 +493,7 @@ config_result_t config_apply_env(piadina_config_t *config,
             return CONFIG_ERR_INVALID_VALUE;
         }
         config->validate = (val == 1);
+        config->validate_set = true;
     }
 
     /* PIADINA_FORCE_EXTRACT */

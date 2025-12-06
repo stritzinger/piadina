@@ -15,27 +15,22 @@
 #include <ctype.h>
 
 #include "common/metadata_core.h"
+#include "common/metadata_tree.h"
 
-/* ------------------------------------------------------------------------- */
-/* Helpers forward declarations                                             */
-/* ------------------------------------------------------------------------- */
+static char g_error_buf[256];
+
+/* Internal Prototypes */
+
 static azdora_metadata_result_t parse_hex_bytes(const char *hex,
                                                 size_t expected_bytes,
                                                 uint8_t *out,
                                                 const char **error_msg);
 static azdora_metadata_result_t parse_base64(const char *in, uint8_t **out, size_t *out_len);
 static bool env_key_shell_safe(const char *key, size_t len);
-static azdora_meta_value_t *map_put_bytes(azdora_meta_map_t *map,
-                                          const char *key,
-                                          size_t key_len,
-                                          const uint8_t *bytes,
-                                          size_t len,
-                                          const char **error_msg);
-static azdora_meta_value_t *map_put_uint(azdora_meta_map_t *map,
-                                         const char *key,
-                                         size_t key_len,
-                                         uint64_t value,
-                                         const char **error_msg);
+static void value_reset(azdora_meta_value_t *value);
+static void value_destroy(azdora_meta_value_t *value);
+static void map_destroy(azdora_meta_map_t *map);
+static void array_destroy(azdora_meta_array_t *array);
 static azdora_meta_value_t *map_get_or_create(azdora_meta_map_t *map,
                                               const char *key,
                                               size_t key_len,
@@ -44,42 +39,52 @@ static azdora_meta_value_t *map_get_or_create(azdora_meta_map_t *map,
 static azdora_meta_value_t *ensure_array_slot(azdora_meta_value_t *array_value,
                                               size_t index,
                                               const char **error_msg);
-static azdora_metadata_result_t set_scalar_value(azdora_meta_value_t *value,
-                                                 azdora_meta_type_t type,
-                                                 const char *str_value,
-                                                 const char **error_msg);
-static void value_reset(azdora_meta_value_t *value);
-static void value_destroy(azdora_meta_value_t *value);
-static void map_destroy(azdora_meta_map_t *map);
-static void array_destroy(azdora_meta_array_t *array);
-static azdora_meta_value_t *value_new(void);
 static azdora_meta_value_t *map_put_scalar(azdora_meta_map_t *map,
                                            const char *key,
                                            size_t key_len,
                                            azdora_meta_type_t type,
                                            const char *str_value,
                                            const char **error_msg);
+static azdora_meta_value_t *map_put_uint(azdora_meta_map_t *map,
+                                         const char *key,
+                                         size_t key_len,
+                                         uint64_t value,
+                                         const char **error_msg);
+static azdora_meta_value_t *map_put_bytes(azdora_meta_map_t *map,
+                                          const char *key,
+                                          size_t key_len,
+                                          const uint8_t *bytes,
+                                          size_t len,
+                                          const char **error_msg);
+static azdora_metadata_result_t set_scalar_value(metadata_tree_value_t *value,
+                                                 metadata_tree_type_t type,
+                                                 const char *str_value,
+                                                 const char **error_msg);
+static azdora_metadata_result_t set_default_string_if_missing(azdora_metadata_t *metadata,
+                                                              const char *key,
+                                                              const char *default_value,
+                                                              const char **error_msg);
+static azdora_metadata_result_t set_default_bool_if_missing(azdora_metadata_t *metadata,
+                                                            const char *key,
+                                                            bool default_value,
+                                                            const char **error_msg);
 static azdora_metadata_result_t ensure_required_defaults(azdora_metadata_t *metadata,
                                                          const char **error_msg);
-static azdora_meta_value_t *map_find(const azdora_meta_map_t *map,
-                                     const char *key,
-                                     size_t key_len);
+static metadata_tree_value_t *map_find(const metadata_tree_map_t *map,
+                                       const char *key,
+                                       size_t key_len);
 static azdora_metadata_result_t enforce_scalar_kind(metadata_core_expected_kind_t expected,
-                                                    azdora_meta_type_t actual,
+                                                    metadata_tree_type_t actual,
                                                     const char **error_msg);
-static void metadata_print_indent(int indent, FILE *stream);
-static void metadata_print_value(const azdora_meta_value_t *val, int indent, FILE *stream);
-static void metadata_print_map(const azdora_meta_map_t *map, int indent, FILE *stream);
+
+/* Exported Functions */
 
 void azdora_metadata_init(azdora_metadata_t *metadata)
 {
     if (!metadata) {
         return;
     }
-    memset(metadata, 0, sizeof(*metadata));
-    metadata->root.count = 0;
-    metadata->root.capacity = 0;
-    metadata->root.entries = NULL;
+    metadata_tree_map_init(&metadata->root);
 }
 
 void azdora_metadata_destroy(azdora_metadata_t *metadata)
@@ -87,7 +92,7 @@ void azdora_metadata_destroy(azdora_metadata_t *metadata)
     if (!metadata) {
         return;
     }
-    map_destroy(&metadata->root);
+    metadata_tree_map_destroy(&metadata->root);
 }
 
 azdora_metadata_result_t azdora_metadata_apply_meta(azdora_metadata_t *metadata,
@@ -121,7 +126,8 @@ azdora_metadata_result_t azdora_metadata_apply_meta(azdora_metadata_t *metadata,
     size_t first_len = dot ? (size_t)(dot - path) : (bracket ? (size_t)(bracket - path) : path_len);
     if (!metadata_core_identifier_valid(path, first_len)) {
         if (error_msg) {
-            *error_msg = "invalid metadata key";
+            snprintf(g_error_buf, sizeof(g_error_buf), "invalid metadata key in '%.*s'", (int)path_len, path);
+            *error_msg = g_error_buf;
         }
         return AZDORA_METADATA_ERR_PARSE;
     }
@@ -177,7 +183,8 @@ azdora_metadata_result_t azdora_metadata_apply_meta(azdora_metadata_t *metadata,
             index = (size_t)strtoul(after_bracket, &endptr, 10);
             if (!endptr || *endptr != ']') {
                 if (error_msg) {
-                    *error_msg = "invalid array index";
+                    snprintf(g_error_buf, sizeof(g_error_buf), "invalid array index in '%.*s'", (int)path_len, path);
+                    *error_msg = g_error_buf;
                 }
                 return AZDORA_METADATA_ERR_PARSE;
             }
@@ -186,37 +193,40 @@ azdora_metadata_result_t azdora_metadata_apply_meta(azdora_metadata_t *metadata,
         size_t base_len = (size_t)(bracket - path);
         if (!metadata_core_identifier_valid(path, base_len)) {
             if (error_msg) {
-                *error_msg = "invalid array name";
+                snprintf(g_error_buf, sizeof(g_error_buf), "invalid array name in '%.*s'", (int)path_len, path);
+                *error_msg = g_error_buf;
             }
             return AZDORA_METADATA_ERR_PARSE;
         }
 
         if (is_known && expected_kind != METADATA_EXPECT_ARRAY_STRING) {
             if (error_msg) {
-                *error_msg = "field is not an array";
+                snprintf(g_error_buf, sizeof(g_error_buf), "field '%.*s' is not an array", (int)base_len, path);
+                *error_msg = g_error_buf;
             }
             return AZDORA_METADATA_ERR_BAD_VALUE;
         }
 
         bool created = false;
-        azdora_meta_value_t *arr_val = map_get_or_create(&metadata->root, path, base_len, &created, error_msg);
+        metadata_tree_value_t *arr_val = metadata_tree_map_get_or_create(&metadata->root, path, base_len, &created);
         if (!arr_val) {
             return AZDORA_METADATA_ERR_OUT_OF_MEMORY;
         }
-        if (!created && arr_val->type != AZDORA_META_ARRAY) {
+        if (!created && arr_val->type != METADATA_TREE_ARRAY) {
             if (error_msg) {
-                *error_msg = "array path used for non-array";
+                snprintf(g_error_buf, sizeof(g_error_buf), "array path '%.*s' used for non-array", (int)base_len, path);
+                *error_msg = g_error_buf;
             }
             return AZDORA_METADATA_ERR_BAD_VALUE;
         }
         if (created) {
-            arr_val->type = AZDORA_META_ARRAY;
+            arr_val->type = METADATA_TREE_ARRAY;
             arr_val->as.array.count = 0;
             arr_val->as.array.capacity = 0;
             arr_val->as.array.items = NULL;
         }
 
-        if (expected_kind == METADATA_EXPECT_ARRAY_STRING && val_type != AZDORA_META_STRING) {
+        if (expected_kind == METADATA_EXPECT_ARRAY_STRING && val_type != METADATA_TREE_STRING) {
             if (error_msg) {
                 *error_msg = "array elements must be strings";
             }
@@ -231,7 +241,7 @@ azdora_metadata_result_t azdora_metadata_apply_meta(azdora_metadata_t *metadata,
             return AZDORA_METADATA_ERR_BAD_VALUE;
         }
 
-        azdora_meta_value_t *slot = ensure_array_slot(arr_val, target_index, error_msg);
+        metadata_tree_value_t *slot = metadata_tree_array_ensure_slot(arr_val, target_index);
         if (!slot) {
             return AZDORA_METADATA_ERR_OUT_OF_MEMORY;
         }
@@ -247,7 +257,8 @@ azdora_metadata_result_t azdora_metadata_apply_meta(azdora_metadata_t *metadata,
         size_t leaf_len = path_len - (size_t)(leaf - path);
         if (!metadata_core_identifier_valid(leaf, leaf_len)) {
             if (error_msg) {
-                *error_msg = "invalid map key";
+                snprintf(g_error_buf, sizeof(g_error_buf), "invalid map key '%.*s'", (int)leaf_len, leaf);
+                *error_msg = g_error_buf;
             }
             return AZDORA_METADATA_ERR_PARSE;
         }
@@ -258,13 +269,15 @@ azdora_metadata_result_t azdora_metadata_apply_meta(azdora_metadata_t *metadata,
             map_known ? metadata_core_expected_kind(map_field) : METADATA_EXPECT_ANY;
         if (map_known && map_expected != METADATA_EXPECT_MAP_STRING) {
             if (error_msg) {
-                *error_msg = "field is not a map";
+                snprintf(g_error_buf, sizeof(g_error_buf), "field '%.*s' is not a map", (int)map_name_len, map_name);
+                *error_msg = g_error_buf;
             }
             return AZDORA_METADATA_ERR_BAD_VALUE;
         }
         if (map_field == METADATA_FIELD_ENV && !env_key_shell_safe(leaf, leaf_len)) {
             if (error_msg) {
-                *error_msg = "ENV keys must match [A-Za-z_][A-Za-z0-9_]*";
+                snprintf(g_error_buf, sizeof(g_error_buf), "ENV key '%.*s' must match [A-Za-z_][A-Za-z0-9_]*", (int)leaf_len, leaf);
+                *error_msg = g_error_buf;
             }
             return AZDORA_METADATA_ERR_PARSE;
         }
@@ -278,28 +291,29 @@ azdora_metadata_result_t azdora_metadata_apply_meta(azdora_metadata_t *metadata,
         }
 
         bool created = false;
-        azdora_meta_value_t *map_val = map_get_or_create(&metadata->root, map_name, map_name_len, &created, error_msg);
+        metadata_tree_value_t *map_val = metadata_tree_map_get_or_create(&metadata->root, map_name, map_name_len, &created);
         if (!map_val) {
             return AZDORA_METADATA_ERR_OUT_OF_MEMORY;
         }
-        if (!created && map_val->type != AZDORA_META_MAP) {
+        if (!created && map_val->type != METADATA_TREE_MAP) {
             if (error_msg) {
-                *error_msg = "map path used for non-map";
+                snprintf(g_error_buf, sizeof(g_error_buf), "map path '%.*s' used for non-map", (int)map_name_len, map_name);
+                *error_msg = g_error_buf;
             }
             return AZDORA_METADATA_ERR_BAD_VALUE;
         }
         if (created) {
-            map_val->type = AZDORA_META_MAP;
+            map_val->type = METADATA_TREE_MAP;
             map_val->as.map.count = 0;
             map_val->as.map.capacity = 0;
             map_val->as.map.entries = NULL;
         }
 
-        azdora_meta_value_t *leaf_val = map_put_scalar(&map_val->as.map, leaf, leaf_len, val_type, typed_value, error_msg);
+        metadata_tree_value_t *leaf_val = metadata_tree_map_get_or_create(&map_val->as.map, leaf, leaf_len, NULL);
         if (!leaf_val) {
             return AZDORA_METADATA_ERR_OUT_OF_MEMORY;
         }
-        return AZDORA_METADATA_OK;
+        return set_scalar_value(leaf_val, val_type, typed_value, error_msg);
     }
 
     /* Top-level scalar (with validations for known keys) */
@@ -318,12 +332,14 @@ azdora_metadata_result_t azdora_metadata_apply_meta(azdora_metadata_t *metadata,
     if (!dot && !bracket && is_known) {
         if (expected_kind == METADATA_EXPECT_ARRAY_STRING) {
             if (error_msg) {
-                *error_msg = "field is an array";
+                snprintf(g_error_buf, sizeof(g_error_buf), "field '%.*s' is an array", (int)path_len, path);
+                *error_msg = g_error_buf;
             }
             return AZDORA_METADATA_ERR_BAD_VALUE;
         } else if (expected_kind == METADATA_EXPECT_MAP_STRING) {
             if (error_msg) {
-                *error_msg = "field is a map";
+                snprintf(g_error_buf, sizeof(g_error_buf), "field '%.*s' is a map", (int)path_len, path);
+                *error_msg = g_error_buf;
             }
             return AZDORA_METADATA_ERR_BAD_VALUE;
         }
@@ -333,9 +349,13 @@ azdora_metadata_result_t azdora_metadata_apply_meta(azdora_metadata_t *metadata,
         }
     }
 
-    azdora_meta_value_t *val = map_put_scalar(&metadata->root, path, path_len, val_type, typed_value, error_msg);
+    metadata_tree_value_t *val = metadata_tree_map_get_or_create(&metadata->root, path, path_len, NULL);
     if (!val) {
         return AZDORA_METADATA_ERR_OUT_OF_MEMORY;
+    }
+    azdora_metadata_result_t rc = set_scalar_value(val, val_type, typed_value, error_msg);
+    if (rc != AZDORA_METADATA_OK) {
+        return rc;
     }
 
     return AZDORA_METADATA_OK;
@@ -355,9 +375,6 @@ azdora_metadata_result_t azdora_metadata_finalize(azdora_metadata_t *metadata,
     return ensure_required_defaults(metadata, error_msg);
 }
 
-/* ------------------------------------------------------------------------- */
-/* Accessors                                                                 */
-/* ------------------------------------------------------------------------- */
 
 const azdora_meta_map_t *azdora_metadata_root(const azdora_metadata_t *metadata)
 {
@@ -479,7 +496,7 @@ void azdora_metadata_print(const azdora_metadata_t *metadata, FILE *stream)
         return;
     }
     /* Start with a two-space indentation so verbose output aligns with footer print. */
-    metadata_print_map(root, 2, stream);
+    metadata_tree_print_map(root, 2, stream);
 }
 
 /* Typed setters built on top of the generic map */
@@ -734,9 +751,7 @@ azdora_metadata_result_t azdora_metadata_set_map_entry_string(azdora_metadata_t 
     return AZDORA_METADATA_OK;
 }
 
-/* ------------------------------------------------------------------------- */
-/* Internal helpers                                                          */
-/* ------------------------------------------------------------------------- */
+/* Internal Functions */
 
 static int hex_value(char c)
 {
@@ -837,12 +852,6 @@ static azdora_metadata_result_t parse_base64(const char *in, uint8_t **out, size
     *out = buf;
     *out_len = o;
     return AZDORA_METADATA_OK;
-}
-
-static azdora_meta_value_t *value_new(void)
-{
-    azdora_meta_value_t *v = calloc(1, sizeof(*v));
-    return v;
 }
 
 static void value_reset(azdora_meta_value_t *value)
@@ -979,68 +988,7 @@ static azdora_metadata_result_t enforce_scalar_kind(metadata_core_expected_kind_
     }
 }
 
-static void metadata_print_indent(int indent, FILE *stream)
-{
-    for (int i = 0; i < indent; ++i) {
-        fputc(' ', stream);
-    }
-}
-
-static void metadata_print_value(const azdora_meta_value_t *val, int indent, FILE *stream)
-{
-    switch (val->type) {
-    case AZDORA_META_STRING:
-        fprintf(stream, "\"%s\"", val->as.str ? val->as.str : "");
-        break;
-    case AZDORA_META_UINT:
-        fprintf(stream, "%llu", (unsigned long long)val->as.uint_val);
-        break;
-    case AZDORA_META_BOOL:
-        fprintf(stream, "%s", val->as.bool_val ? "true" : "false");
-        break;
-    case AZDORA_META_BYTES:
-        fprintf(stream, "hex:");
-        for (size_t i = 0; i < val->as.bytes.len; ++i) {
-            fprintf(stream, "%02x", val->as.bytes.data ? val->as.bytes.data[i] : 0);
-        }
-        break;
-    case AZDORA_META_ARRAY:
-        fprintf(stream, "[\n");
-        for (size_t i = 0; i < val->as.array.count; ++i) {
-            metadata_print_indent(indent + 2, stream);
-            metadata_print_value(&val->as.array.items[i], indent + 2, stream);
-            if (i + 1 < val->as.array.count) {
-                fprintf(stream, ",");
-            }
-            fprintf(stream, "\n");
-        }
-        metadata_print_indent(indent, stream);
-        fprintf(stream, "]");
-        break;
-    case AZDORA_META_MAP:
-        fprintf(stream, "{\n");
-        metadata_print_map(&val->as.map, indent + 2, stream);
-        metadata_print_indent(indent, stream);
-        fprintf(stream, "}");
-        break;
-    default:
-        fprintf(stream, "<unknown>");
-        break;
-    }
-}
-
-static void metadata_print_map(const azdora_meta_map_t *map, int indent, FILE *stream)
-{
-    for (size_t i = 0; i < map->count; ++i) {
-        metadata_print_indent(indent, stream);
-        fprintf(stream, "%s: ", map->entries[i].key);
-        metadata_print_value(map->entries[i].value, indent, stream);
-        if (i + 1 < map->count) {
-            fprintf(stream, ",");
-        }
-        fprintf(stream, "\n");
-    }
-}
+/* printing now provided by metadata_tree_print_map */
 
 static bool env_key_shell_safe(const char *key, size_t len)
 {
@@ -1067,27 +1015,10 @@ static azdora_meta_value_t *map_put_bytes(azdora_meta_map_t *map,
                                           size_t len,
                                           const char **error_msg)
 {
-    bool created = false;
-    azdora_meta_value_t *val = map_get_or_create(map, key, key_len, &created, error_msg);
-    if (!val) {
-        return NULL;
+    azdora_meta_value_t *val = metadata_tree_map_put_bytes(map, key, key_len, bytes, len);
+    if (!val && error_msg) {
+        *error_msg = "out of memory";
     }
-    value_reset(val);
-    val->type = AZDORA_META_BYTES;
-    if (len == 0) {
-        val->as.bytes.data = NULL;
-        val->as.bytes.len = 0;
-        return val;
-    }
-    val->as.bytes.data = malloc(len);
-    if (!val->as.bytes.data) {
-        if (error_msg) {
-            *error_msg = "out of memory";
-        }
-        return NULL;
-    }
-    memcpy(val->as.bytes.data, bytes, len);
-    val->as.bytes.len = len;
     return val;
 }
 
@@ -1104,39 +1035,9 @@ static azdora_meta_value_t *map_get_or_create(azdora_meta_map_t *map,
         }
         return existing;
     }
-
-    if (map->count == map->capacity) {
-        size_t new_cap = map->capacity ? map->capacity * 2 : 4;
-        azdora_meta_map_entry_t *new_entries = realloc(map->entries, new_cap * sizeof(*new_entries));
-        if (!new_entries) {
-            if (error_msg) {
-                *error_msg = "out of memory";
-            }
-            return NULL;
-        }
-        map->entries = new_entries;
-        map->capacity = new_cap;
-    }
-
-    azdora_meta_value_t *val = value_new();
-    if (!val) {
-        if (error_msg) {
-            *error_msg = "out of memory";
-        }
-        return NULL;
-    }
-    map->entries[map->count].key = strndup(key, key_len);
-    if (!map->entries[map->count].key) {
-        value_destroy(val);
-        if (error_msg) {
-            *error_msg = "out of memory";
-        }
-        return NULL;
-    }
-    map->entries[map->count].value = val;
-    map->count += 1;
-    if (created) {
-        *created = true;
+    azdora_meta_value_t *val = metadata_tree_map_get_or_create(map, key, key_len, created);
+    if (!val && error_msg) {
+        *error_msg = "out of memory";
     }
     return val;
 }
@@ -1145,36 +1046,11 @@ static azdora_meta_value_t *ensure_array_slot(azdora_meta_value_t *array_value,
                                               size_t index,
                                               const char **error_msg)
 {
-    if (!array_value || array_value->type != AZDORA_META_ARRAY) {
-        if (error_msg) {
-            *error_msg = "not an array";
-        }
-        return NULL;
+    metadata_tree_value_t *slot = metadata_tree_array_ensure_slot(array_value, index);
+    if (!slot && error_msg) {
+        *error_msg = "out of memory";
     }
-    azdora_meta_array_t *arr = &array_value->as.array;
-    if (index >= arr->capacity) {
-        size_t new_cap = arr->capacity ? arr->capacity : 4;
-        while (new_cap <= index) {
-            new_cap *= 2;
-        }
-        azdora_meta_value_t *new_items = realloc(arr->items, new_cap * sizeof(*new_items));
-        if (!new_items) {
-            if (error_msg) {
-                *error_msg = "out of memory";
-            }
-            return NULL;
-        }
-        /* Initialize new slots */
-        for (size_t i = arr->capacity; i < new_cap; ++i) {
-            memset(&new_items[i], 0, sizeof(new_items[i]));
-        }
-        arr->items = new_items;
-        arr->capacity = new_cap;
-    }
-    if (index >= arr->count) {
-        arr->count = index + 1;
-    }
-    return &arr->items[index];
+    return slot;
 }
 
 static azdora_metadata_result_t set_scalar_value(azdora_meta_value_t *value,
@@ -1304,6 +1180,41 @@ static azdora_meta_value_t *map_put_uint(azdora_meta_map_t *map,
     return val;
 }
 
+static azdora_metadata_result_t set_default_string_if_missing(azdora_metadata_t *metadata,
+                                                              const char *key,
+                                                              const char *default_value,
+                                                              const char **error_msg)
+{
+    if (!metadata || !key || !default_value) {
+        return AZDORA_METADATA_ERR_INVALID_ARGUMENT;
+    }
+    azdora_meta_value_t *existing = map_find(&metadata->root, key, strlen(key));
+    if (existing) {
+        return AZDORA_METADATA_OK;
+    }
+    return map_put_scalar(&metadata->root, key, strlen(key), AZDORA_META_STRING, default_value, error_msg)
+               ? AZDORA_METADATA_OK
+               : AZDORA_METADATA_ERR_OUT_OF_MEMORY;
+}
+
+static azdora_metadata_result_t set_default_bool_if_missing(azdora_metadata_t *metadata,
+                                                            const char *key,
+                                                            bool default_value,
+                                                            const char **error_msg)
+{
+    if (!metadata || !key) {
+        return AZDORA_METADATA_ERR_INVALID_ARGUMENT;
+    }
+    azdora_meta_value_t *existing = map_find(&metadata->root, key, strlen(key));
+    if (existing) {
+        return AZDORA_METADATA_OK;
+    }
+    return map_put_scalar(&metadata->root, key, strlen(key), AZDORA_META_BOOL,
+                          default_value ? "true" : "false", error_msg)
+               ? AZDORA_METADATA_OK
+               : AZDORA_METADATA_ERR_OUT_OF_MEMORY;
+}
+
 static azdora_metadata_result_t ensure_required_defaults(azdora_metadata_t *metadata,
                                                          const char **error_msg)
 {
@@ -1323,6 +1234,12 @@ static azdora_metadata_result_t ensure_required_defaults(azdora_metadata_t *meta
         }
         return AZDORA_METADATA_ERR_MISSING_REQUIRED;
     }
+    if (entry->as.str && entry->as.str[0] == '\0') {
+        if (error_msg) {
+            *error_msg = "ENTRY_POINT cannot be empty";
+        }
+        return AZDORA_METADATA_ERR_BAD_VALUE;
+    }
 
     /* PAYLOAD_HASH default to zeros */
     static const uint8_t zero_hash[32] = {0};
@@ -1335,6 +1252,83 @@ static azdora_metadata_result_t ensure_required_defaults(azdora_metadata_t *meta
     if (!map_put_bytes(&metadata->root, "ARCHIVE_HASH", strlen("ARCHIVE_HASH"),
                        zero_hash, sizeof(zero_hash), error_msg)) {
         return AZDORA_METADATA_ERR_OUT_OF_MEMORY;
+    }
+
+    /* ARCHIVE_FORMAT default + validation */
+    azdora_meta_value_t *archive_fmt =
+        map_find(&metadata->root, "ARCHIVE_FORMAT", strlen("ARCHIVE_FORMAT"));
+    if (!archive_fmt) {
+        azdora_metadata_result_t rc =
+            set_default_string_if_missing(metadata, "ARCHIVE_FORMAT",
+                                          metadata_core_archive_format_default(), error_msg);
+        if (rc != AZDORA_METADATA_OK) {
+            return rc;
+        }
+        archive_fmt = map_find(&metadata->root, "ARCHIVE_FORMAT", strlen("ARCHIVE_FORMAT"));
+    }
+    if (archive_fmt) {
+        if (archive_fmt->type != AZDORA_META_STRING) {
+            if (error_msg) {
+                *error_msg = "ARCHIVE_FORMAT must be text";
+            }
+            return AZDORA_METADATA_ERR_BAD_VALUE;
+        }
+        if (!metadata_core_archive_format_supported(archive_fmt->as.str)) {
+            if (error_msg) {
+                static char fmt_err[128];
+                snprintf(fmt_err, sizeof(fmt_err), "unsupported archive format %s", archive_fmt->as.str);
+                *error_msg = fmt_err;
+            }
+            return AZDORA_METADATA_ERR_BAD_VALUE;
+        }
+    }
+
+    /* CACHE_ROOT and PAYLOAD_ROOT defaults */
+    azdora_metadata_result_t rc = set_default_string_if_missing(metadata, "CACHE_ROOT",
+                                                                metadata_core_field_default_string(METADATA_FIELD_CACHE_ROOT),
+                                                                error_msg);
+    if (rc != AZDORA_METADATA_OK) {
+        return rc;
+    }
+    rc = set_default_string_if_missing(metadata, "PAYLOAD_ROOT",
+                                       metadata_core_field_default_string(METADATA_FIELD_PAYLOAD_ROOT),
+                                       error_msg);
+    if (rc != AZDORA_METADATA_OK) {
+        return rc;
+    }
+
+    /* CLEANUP_POLICY default + validation */
+    azdora_meta_value_t *cleanup =
+        map_find(&metadata->root, "CLEANUP_POLICY", strlen("CLEANUP_POLICY"));
+    if (!cleanup) {
+        rc = set_default_string_if_missing(metadata, "CLEANUP_POLICY",
+                                           metadata_core_cleanup_policy_to_string(metadata_core_cleanup_policy_default()),
+                                           error_msg);
+        if (rc != AZDORA_METADATA_OK) {
+            return rc;
+        }
+        cleanup = map_find(&metadata->root, "CLEANUP_POLICY", strlen("CLEANUP_POLICY"));
+    }
+    if (cleanup) {
+        if (cleanup->type != AZDORA_META_STRING) {
+            if (error_msg) {
+                *error_msg = "CLEANUP_POLICY must be text";
+            }
+            return AZDORA_METADATA_ERR_BAD_VALUE;
+        }
+        if (metadata_core_cleanup_policy_from_string(cleanup->as.str) == METADATA_CLEANUP_INVALID) {
+            if (error_msg) {
+                *error_msg = "invalid cleanup policy (expected never|oncrash|always)";
+            }
+            return AZDORA_METADATA_ERR_BAD_VALUE;
+        }
+    }
+
+    /* VALIDATE default */
+    rc = set_default_bool_if_missing(metadata, "VALIDATE",
+                                     metadata_core_validate_default(), error_msg);
+    if (rc != AZDORA_METADATA_OK) {
+        return rc;
     }
 
     return AZDORA_METADATA_OK;

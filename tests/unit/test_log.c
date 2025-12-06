@@ -21,7 +21,7 @@ static void read_stream(FILE *stream, char *buffer, size_t buffer_size)
 
 void setUp(void)
 {
-    log_set_level(LOG_LEVEL_INFO);
+    log_set_level(log_level_default());
     log_set_stream(NULL);
 }
 
@@ -29,7 +29,7 @@ void tearDown(void) {}
 
 static void test_log_default_level_is_info(void)
 {
-    TEST_ASSERT_EQUAL(LOG_LEVEL_INFO, log_get_level());
+    TEST_ASSERT_EQUAL(LOG_LEVEL_WARN, log_get_level());
 }
 
 static void test_log_filters_below_level(void)
@@ -65,7 +65,7 @@ static void test_log_emits_debug_when_enabled(void)
     char buffer[256];
     read_stream(stream, buffer, sizeof(buffer));
 
-    TEST_ASSERT_NOT_NULL(strstr(buffer, "[DEBUG]"));
+    TEST_ASSERT_NOT_NULL(strstr(buffer, "[piadina]"));
     TEST_ASSERT_NOT_NULL(strstr(buffer, "debug 42"));
 
     fclose(stream);
@@ -84,7 +84,7 @@ static void test_log_level_from_string(void)
 
 static void test_log_level_default(void)
 {
-    TEST_ASSERT_EQUAL(LOG_LEVEL_INFO, log_level_default());
+    TEST_ASSERT_EQUAL(LOG_LEVEL_WARN, log_level_default());
 }
 
 int main(void)

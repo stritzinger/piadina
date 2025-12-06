@@ -12,6 +12,8 @@
 #include <ctype.h>
 #include <string.h>
 
+/* Internal Prototypes */
+
 typedef struct {
     const char *name;
     metadata_core_field_t field;
@@ -31,10 +33,9 @@ static const metadata_field_descriptor_t kFieldTable[] = {
     {"ENTRY_ARGS", METADATA_FIELD_ENTRY_ARGS, false, NULL, METADATA_EXPECT_ARRAY_STRING},
     {"ENTRY_ARGS_POST", METADATA_FIELD_ENTRY_ARGS_POST, false, NULL, METADATA_EXPECT_ARRAY_STRING},
     {"CACHE_ROOT", METADATA_FIELD_CACHE_ROOT, false, "{HOME}/.piadina/cache", METADATA_EXPECT_STRING},
-    {"PAYLOAD_ROOT", METADATA_FIELD_PAYLOAD_ROOT, false, "{CACHE_ROOT}/{PAYLOAD_HASH}", METADATA_EXPECT_STRING},
+    {"PAYLOAD_ROOT", METADATA_FIELD_PAYLOAD_ROOT, false, "{CACHE_ROOT}/{ARCHIVE_HASH}", METADATA_EXPECT_STRING},
     {"CLEANUP_POLICY", METADATA_FIELD_CLEANUP_POLICY, false, "oncrash", METADATA_EXPECT_STRING},
     {"VALIDATE", METADATA_FIELD_VALIDATE, false, "false", METADATA_EXPECT_BOOL},
-    {"LOG_LEVEL", METADATA_FIELD_LOG_LEVEL, false, "info", METADATA_EXPECT_STRING},
     {"ENV", METADATA_FIELD_ENV, false, NULL, METADATA_EXPECT_MAP_STRING},
 };
 
@@ -51,6 +52,8 @@ static const cleanup_policy_entry_t kCleanupPolicies[] = {
     {"oncrash", METADATA_CLEANUP_ONCRASH},
     {"always", METADATA_CLEANUP_ALWAYS},
 };
+
+/* Exported Functions */
 
 bool metadata_core_identifier_valid(const char *key, size_t len)
 {

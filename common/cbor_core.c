@@ -23,12 +23,16 @@ struct cbor_core_decoder {
     cbor_item_t *root;
 };
 
+/* Internal Prototypes */
+
 static cbor_core_result_t encoder_reserve(cbor_core_encoder_t *encoder, size_t extra);
 static cbor_core_result_t encoder_append(cbor_core_encoder_t *encoder, const unsigned char *data, size_t len);
 static cbor_core_result_t append_header(cbor_core_encoder_t *encoder,
                                         size_t (*encode_fn)(size_t, unsigned char *, size_t),
                                         size_t length);
 static cbor_item_t *value_item(const cbor_core_value_t *value);
+
+/* Exported Functions */
 
 cbor_core_encoder_t *cbor_core_encoder_new(void)
 {

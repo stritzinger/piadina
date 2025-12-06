@@ -12,7 +12,7 @@ SPDX-License-Identifier: Apache-2.0
 - **Launcher**: The behavioral role implemented by the Piadina executable: read footer and metadata, manage caching and extraction, and `execve` the target application.
 - **Packer**: The behavioral role implemented by the Azdora executable: assemble launcher, metadata, archive, and footer into a single binary.
 - **Payload**: The directory tree that is tarred and compressed into the archive (e.g. an Erlang/OTP release). After extraction, it lives under `PAYLOAD_ROOT`.
-- **Payload root (`PAYLOAD_ROOT`)**: The directory on disk where Piadina extracts (or reuses) the payload for a given `PAYLOAD_HASH` (typically `{CACHE_ROOT}/{PAYLOAD_HASH}`).
+- **Payload root (`PAYLOAD_ROOT`)**: The directory on disk where Piadina extracts (or reuses) the payload for a given archive (currently `{CACHE_ROOT}/{ARCHIVE_HASH}` until payload hashing is implemented).
 - **Cache root (`CACHE_ROOT`)**: The top-level directory under which all cached payloads and auxiliary files (locks, temp dirs, ready markers) are stored (default `{HOME}/.piadina/cache`).
 - **`PAYLOAD_HASH`**: SHA-256–based hash defined over the logical payload directory tree (paths, modes, contents, symlinks) before archiving. Used to key the cache and validate extracted payloads.
 - **`ARCHIVE_HASH`**: SHA-256 hash over the exact tar+gzip byte stream embedded in the binary. Used to validate the integrity of the embedded archive.
@@ -249,12 +249,6 @@ Extraction/cache configuration:
   - If `true`, existing cached payloads are validated against `PAYLOAD_HASH` by default.
   - Default if absent: `false`.
 
-Logging / diagnostics:
-
-- **`"LOG_LEVEL"`** (text, optional):
-  - One of `"debug"`, `"info"`, `"warn"`, `"error"`.
-  - Default if absent: `"info"`.
-
 The builder tools (Azdora and any future alternatives) are responsible for producing this CBOR metadata according to the schema.
 
 ##### 3.2.2 Template Substitution
@@ -286,7 +280,11 @@ Templating evaluation order:
    - Take the metadata field `"PAYLOAD_ROOT"` (or its default value defined later on).
    - Apply template substitution using the variable set extended with `{CACHE_ROOT}`.
    - The result is the **payload root directory** and is also exported as variable `{PAYLOAD_ROOT}`.
-4. **Resolve metadata environment variables**:
+4. **Resolve arguments**:
+   - Apply template substitution to each element of `"ENTRY_ARGS"` and `"ENTRY_ARGS_POST"`.
+   - This allows these fields to reference variables like `{PAYLOAD_ROOT}` or `{CACHE_ROOT}`.
+   - Note: `"ENTRY_POINT"` does **not** support template substitution; it must be a valid relative path within the payload.
+5. **Resolve metadata environment variables**:
    - For each entry in metadata `"ENV"`, apply template substitution using all previously defined fields.
    - The resulting key/value pairs are then applied to the child’s environment.
 
@@ -394,7 +392,6 @@ Environment variables mirror many CLI options:
 - **`PIADINA_FORCE_EXTRACT`**
   - Values: `true`, `false`.
   - Equivalent to `--launcher-force-extract`.
-
 - **`PIADINA_LOG_LEVEL`**
   - Values: `debug`, `info`, `warn`, `error`.
   - Equivalent to `--launcher-log-level`.
@@ -416,7 +413,7 @@ Given:
 Suggested defaults on Linux:
 
 - `CACHE_ROOT = {HOME}/.piadina/cache` (or a fallback in `/tmp` if `HOME` is not set).
-- `PAYLOAD_ROOT = {CACHE_ROOT}/{PAYLOAD_HASH}`.
+- `PAYLOAD_ROOT = {CACHE_ROOT}/{ARCHIVE_HASH}` (until payload hashing is implemented).
 - `TEMP_DIR = {CACHE_ROOT}/.{PAYLOAD_HASH}.tmp`.
 - `LOCK_FILE = {CACHE_ROOT}/.{PAYLOAD_HASH}.lock`.
 - `READY_MARKER = {CACHE_ROOT}/.{PAYLOAD_HASH}.ready`.
@@ -566,7 +563,7 @@ Generation order:
   - Metadata- and launcher-derived variables such as `PAYLOAD_HASH`, `CACHE_ROOT`, and `PAYLOAD_ROOT` MUST be written before variables that reference `${PAYLOAD_HASH}`, `${CACHE_ROOT}`, or `${PAYLOAD_ROOT}`.
   - Prefixed map variables (e.g. `ENV_FOO`, `CUSTOM_SETTINGS_BAR`) MUST be written before any unprefixed `ENV` variables, and all unprefixed `ENV` variables MUST appear at the very end of the file so that they can safely override earlier definitions when sourced.
   - The exact set of exported keys is:
-  - One uppercase `KEY=VALUE` assignment for each top-level metadata field defined in §3.2.1 (e.g. `VERSION`, `APP_NAME`, `APP_VER`, `ARCHIVE_HASH`, `ARCHIVE_FORMAT`, `PAYLOAD_HASH`, `CACHE_ROOT`, `PAYLOAD_ROOT`, `CLEANUP_POLICY`, `VALIDATE`, `LOG_LEVEL`, `ENTRY_POINT`), whether explicitly provided in metadata or filled in by defaults.
+  - One uppercase `KEY=VALUE` assignment for each top-level metadata field defined in §3.2.1 (e.g. `VERSION`, `APP_NAME`, `APP_VER`, `ARCHIVE_HASH`, `ARCHIVE_FORMAT`, `PAYLOAD_HASH`, `CACHE_ROOT`, `PAYLOAD_ROOT`, `CLEANUP_POLICY`, `VALIDATE`, `ENTRY_POINT`), whether explicitly provided in metadata or filled in by defaults.
   - The array and map expansions described above (e.g. `ENTRY_ARGS_COUNT`/`ENTRY_ARGS_N`, prefixed `ENV_*`, and similar for any user-defined maps following the same pattern).
   - For the special `"ENV"` map only, the additional unprefixed variables corresponding to each key, written last as described above, so that they override earlier definitions when the file is sourced.
   - No other keys derived from the ambient OS environment or internal launcher state MAY be exported into `.piadina_env`.
@@ -581,10 +578,9 @@ Below is a **realistic `.piadina_env` example** for an Erlang/OTP release with d
 - `"APP_NAME" = "my_app"`, `"APP_VER" = "1.2.3"`.
 - `"ARCHIVE_HASH"` and `"PAYLOAD_HASH"` are 64-character hex SHA-256 strings.
 - `"ARCHIVE_FORMAT"` omitted, so it defaults to `"tar+gzip"`.
-- `"CACHE_ROOT" = "{HOME}/.piadina/cache"`, `"PAYLOAD_ROOT" = "{CACHE_ROOT}/{PAYLOAD_HASH}"`.
+- `"CACHE_ROOT" = "{HOME}/.piadina/cache"`, `"PAYLOAD_ROOT" = "{CACHE_ROOT}/{ARCHIVE_HASH}"`.
 - `"CLEANUP_POLICY"` omitted, so it defaults to `"oncrash"`.
 - `"VALIDATE"` omitted, so it defaults to `false`.
-- `"LOG_LEVEL"` omitted, so it defaults to `"info"`.
 - `"ENTRY_POINT" = "bin/my_app"`.
 - `"ENTRY_ARGS" = ["console", "--no-halt"]`.
 - `"ENV"` contains (Erlang release-related variables):
@@ -613,7 +609,6 @@ PAYLOAD_ROOT="${CACHE_ROOT}/${PAYLOAD_HASH}"
 # Defaulted behavioral settings
 CLEANUP_POLICY="oncrash"
 VALIDATE="false"
-LOG_LEVEL="info"
 
 # Entry point and arguments
 ENTRY_POINT="${PAYLOAD_ROOT}/bin/my_app"
@@ -766,7 +761,7 @@ Key paths:
 
 - **Top-level fields** (from the shared schema in §3.2.1):
   - Examples: `APP_NAME`, `APP_VER`, `ENTRY_POINT`, `CACHE_ROOT`, `PAYLOAD_ROOT`,
-    `CLEANUP_POLICY`, `VALIDATE`, `LOG_LEVEL`, `ARCHIVE_HASH`, `PAYLOAD_HASH`.
+    `CLEANUP_POLICY`, `VALIDATE`, `ARCHIVE_HASH`, `PAYLOAD_HASH`.
   - The `VERSION` field is reserved and set automatically by Azdora; specifying `--meta VERSION=...` MUST be rejected with an error.
 - **Map entries**:
   - `MAP.KEY` form, where `MAP` is a top-level map and `KEY` is the user key.
@@ -809,10 +804,9 @@ Examples:
   - `--meta APP_VER="1.2.3"`
   - `--meta ENTRY_POINT=bin/my_app`
   - `--meta CACHE_ROOT="{HOME}/.piadina/cache"`
-  - `--meta PAYLOAD_ROOT="{CACHE_ROOT}/{PAYLOAD_HASH}"`
+  - `--meta PAYLOAD_ROOT="{CACHE_ROOT}/{ARCHIVE_HASH}"`
   - `--meta CLEANUP_POLICY=oncrash`
   - `--meta VALIDATE=b:true`
-  - `--meta LOG_LEVEL=info`
 
 - **Arrays**:
   - Append:
@@ -972,7 +966,7 @@ These modules live under a shared `common/` directory (plus the Autotools-genera
 - **`metadata_core.{c,h}`**
   - Shared metadata schema definitions and helpers:
     - Constants and enumerations for well-known fields and maps (e.g. `VERSION`, `APP_NAME`, `ENTRY_POINT`, `ENV`).
-    - Shared validation helpers for key naming, allowed value sets (e.g. `CLEANUP_POLICY`, `LOG_LEVEL`), and required/optional fields.
+    - Shared validation helpers for key naming, allowed value sets (e.g. `CLEANUP_POLICY`, `ARCHIVE_FORMAT`), and required/optional fields.
     - Utilities to apply defaults and to map between CBOR keys and internal field identifiers.
 
 - **`footer.{c,h}`**
@@ -1050,7 +1044,7 @@ This section lists the planned C modules for the **Piadina launcher** and their 
       - Template expansion via `template.{c,h}`.
     - Produces a `struct piadina_context` with:
       - Effective `CACHE_ROOT`, `PAYLOAD_ROOT`, `TEMP_DIR`, `LOCK_FILE`, `READY_MARKER`.
-      - Effective `ENTRY_POINT`, `ENTRY_ARGS` (resolved array), `CLEANUP_POLICY`, `VALIDATE`, `LOG_LEVEL`.
+      - Effective `ENTRY_POINT`, `ENTRY_ARGS` (resolved array), `CLEANUP_POLICY`, `VALIDATE`.
       - Resolved `ENV` map and any user-defined maps.
     - Provides both:
       - Fully expanded values used at runtime, and
@@ -1265,8 +1259,8 @@ Planned development phases for Piadina and Azdora as a combined project. Each mi
         - For this milestone these functions are **thin wrappers around `libcbor`**, so no custom encoder is written yet; all callers see only the `cbor_core` API so the backend can be swapped later without touching higher layers.
      - Implement `common/metadata_core.{c,h}`:
        - Enumerations/constants for well-known metadata entries (`VERSION`, `APP_NAME`, `ENTRY_POINT`, `ENV`, etc.).
-       - Validation helpers for key naming and allowed values (`CLEANUP_POLICY`, `LOG_LEVEL`, `ARCHIVE_FORMAT`, etc.).
-       - Defaulting helpers (e.g. default `LOG_LEVEL="info"`).
+       - Validation helpers for key naming and allowed values (`CLEANUP_POLICY`, `ARCHIVE_FORMAT`, etc.).
+       - Defaulting helpers for metadata fields that carry defaults (e.g. archive format, cache root).
    - **Expected output**:
      - Standalone unit tests can:
        - Encode/decode small CBOR fragments and confirm round-trips.

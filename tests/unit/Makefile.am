@@ -16,12 +16,16 @@ check_PROGRAMS = \
 	test_footer \
 	test_cbor_core \
 	test_metadata_core \
+	test_metadata_tree \
 	test_config \
 	test_azdora_config \
 	test_azdora_metadata \
 	test_azdora_cbor_encode \
 	test_azdora_assembler \
-	test_tar_gzip
+	test_tar_gzip \
+	test_piadina_metadata \
+	test_piadina_context \
+	test_piadina_loader
 
 TESTS = $(check_PROGRAMS)
 
@@ -48,6 +52,9 @@ test_cbor_core_LDADD = $(LDADD)
 test_metadata_core_SOURCES = test_metadata_core.c ../unity/unity.c
 test_metadata_core_LDADD = $(LDADD)
 
+test_metadata_tree_SOURCES = test_metadata_tree.c ../unity/unity.c
+test_metadata_tree_LDADD = $(LDADD)
+
 test_config_SOURCES = test_config.c ../unity/unity.c
 test_config_LDADD = $(top_builddir)/piadina/piadina-config.o $(LDADD)
 
@@ -72,3 +79,16 @@ test_tar_gzip_SOURCES = test_tar_gzip.c ../unity/unity.c
 test_tar_gzip_LDADD = $(top_builddir)/azdora/azdora-packer_tar_gzip.o \
 	$(top_builddir)/piadina/piadina-extractor_tar_gzip.o \
 	$(top_builddir)/piadina/piadina-archive.o $(LDADD)
+
+test_piadina_metadata_SOURCES = test_piadina_metadata.c ../unity/unity.c
+test_piadina_metadata_LDADD = $(top_builddir)/piadina/piadina-metadata.o $(LDADD)
+
+test_piadina_context_SOURCES = test_piadina_context.c ../unity/unity.c
+test_piadina_context_LDADD = $(top_builddir)/piadina/piadina-metadata.o \
+	$(top_builddir)/piadina/piadina-context.o $(LDADD)
+
+test_piadina_loader_SOURCES = test_piadina_loader.c ../unity/unity.c
+test_piadina_loader_LDADD = $(top_builddir)/piadina/piadina-loader.o \
+	$(top_builddir)/piadina/piadina-metadata.o \
+	$(top_builddir)/piadina/piadina-archive.o \
+	$(top_builddir)/piadina/piadina-extractor_tar_gzip.o $(LDADD)

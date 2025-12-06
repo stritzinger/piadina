@@ -16,6 +16,8 @@
 #include <unistd.h>
 #endif
 
+/* Exported Functions */
+
 platform_result_t platform_get_self_exe_path(char *buf, size_t buf_size)
 {
     if (!buf || buf_size == 0) {

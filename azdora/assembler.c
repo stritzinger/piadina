@@ -11,6 +11,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,6 +25,8 @@
 #include "packer_tar_gzip.h"
 
 #define COPY_BUFFER_SIZE 4096
+
+/* Internal Prototypes */
 
 static int copy_fd(int src_fd, int dst_fd);
 static azdora_assembler_result_t write_metadata_block(int out_fd,
@@ -39,6 +42,10 @@ static azdora_assembler_result_t write_footer_block(int out_fd,
                                                     const uint8_t metadata_hash[32],
                                                     bool verbose);
 static bool compute_hash_region(int fd, uint64_t offset, uint64_t size, uint8_t out_hash[32]);
+azdora_assembler_result_t normalize_entry_point(const azdora_config_t *config,
+                                                azdora_metadata_t *metadata);
+
+/* Exported Functions */
 
 azdora_assembler_result_t azdora_assembler_build(const azdora_config_t *config,
                                                  const azdora_metadata_t *metadata)
@@ -126,6 +133,14 @@ azdora_assembler_result_t azdora_assembler_build(const azdora_config_t *config,
 
     azdora_metadata_t mutable_md = *metadata;
     const char *set_err = NULL;
+
+    azdora_assembler_result_t norm_rc = normalize_entry_point(config, &mutable_md);
+    if (norm_rc != AZDORA_ASSEMBLER_OK) {
+        close(out_fd);
+        unlink(config->output_path);
+        return norm_rc;
+    }
+
     azdora_metadata_result_t set_rc = azdora_metadata_set_field_bytes(&mutable_md,
                                                                       METADATA_FIELD_ARCHIVE_HASH,
                                                                       archive_hash,
@@ -194,9 +209,7 @@ const char *azdora_assembler_result_to_string(azdora_assembler_result_t result)
     }
 }
 
-/* ------------------------------------------------------------------------- */
-/* Internal helpers                                                          */
-/* ------------------------------------------------------------------------- */
+/* Internal Functions */
 
 static int copy_fd(int src_fd, int dst_fd)
 {
@@ -323,4 +336,67 @@ static bool compute_hash_region(int fd, uint64_t offset, uint64_t size, uint8_t 
     }
 
     return crypto_sha256_final(&ctx, out_hash);
+}
+
+azdora_assembler_result_t normalize_entry_point(const azdora_config_t *config,
+                                                azdora_metadata_t *metadata)
+{
+    const char *entry_point = NULL;
+    const char *err = NULL;
+    azdora_metadata_result_t rc = azdora_metadata_get_string(metadata,
+                                                             METADATA_FIELD_ENTRY_POINT,
+                                                             &entry_point,
+                                                             &err);
+    if (rc != AZDORA_METADATA_OK || !entry_point) {
+        fprintf(stderr, "[azdora] missing ENTRY_POINT: %s\n", err ? err : "unknown error");
+        return AZDORA_ASSEMBLER_ERR_METADATA_ENCODE;
+    }
+
+    if (entry_point[0] != '/') {
+        return AZDORA_ASSEMBLER_OK;
+    }
+
+    if (!config->payload_dir) {
+        fprintf(stderr, "[azdora] absolute ENTRY_POINT requires payload_dir\n");
+        return AZDORA_ASSEMBLER_ERR_METADATA_ENCODE;
+    }
+
+    char payload_real[PATH_MAX];
+    char entry_real[PATH_MAX];
+
+    if (!realpath(config->payload_dir, payload_real)) {
+        fprintf(stderr, "[azdora] failed to resolve payload dir: %s\n", strerror(errno));
+        return AZDORA_ASSEMBLER_ERR_METADATA_ENCODE;
+    }
+    if (!realpath(entry_point, entry_real)) {
+        fprintf(stderr, "[azdora] failed to resolve ENTRY_POINT: %s\n", strerror(errno));
+        return AZDORA_ASSEMBLER_ERR_METADATA_ENCODE;
+    }
+
+    size_t prefix_len = strlen(payload_real);
+    if (strncmp(entry_real, payload_real, prefix_len) != 0 ||
+        (entry_real[prefix_len] != '/' && entry_real[prefix_len] != '\0')) {
+        fprintf(stderr, "[azdora] ENTRY_POINT must reside within payload root (%s)\n", payload_real);
+        return AZDORA_ASSEMBLER_ERR_METADATA_ENCODE;
+    }
+
+    const char *relative = entry_real + prefix_len;
+    if (*relative == '/') {
+        relative++;
+    }
+    if (*relative == '\0') {
+        fprintf(stderr, "[azdora] ENTRY_POINT cannot be the payload root itself\n");
+        return AZDORA_ASSEMBLER_ERR_METADATA_ENCODE;
+    }
+
+    rc = azdora_metadata_set_field_string(metadata, METADATA_FIELD_ENTRY_POINT, relative, &err);
+    if (rc != AZDORA_METADATA_OK) {
+        fprintf(stderr, "[azdora] failed to normalize ENTRY_POINT: %s\n", err ? err : "unknown error");
+        return AZDORA_ASSEMBLER_ERR_METADATA_ENCODE;
+    }
+
+    if (config->verbose) {
+        fprintf(stderr, "[azdora] normalized ENTRY_POINT to %s\n", relative);
+    }
+    return AZDORA_ASSEMBLER_OK;
 }

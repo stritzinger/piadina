@@ -17,7 +17,11 @@
 static log_level_t current_level = LOG_LEVEL_INFO;
 static FILE *current_stream = NULL;
 
+/* Internal Prototypes */
+
 static FILE *get_stream(void);
+
+/* Exported Functions */
 
 void log_set_level(log_level_t level)
 {
@@ -77,7 +81,7 @@ log_level_t log_level_from_string(const char *value)
 
 log_level_t log_level_default(void)
 {
-    return LOG_LEVEL_INFO;
+    return LOG_LEVEL_WARN;
 }
 
 void log_log(log_level_t level, const char *fmt, ...)
@@ -91,9 +95,21 @@ void log_log(log_level_t level, const char *fmt, ...)
         stream = stderr;
     }
 
-    /* Pad after bracket so messages align (DEBUG/ERROR=5 chars, INFO/WARN=4) */
-    const char *lvl = log_level_to_string(level);
-    fprintf(stream, "[%s]%*s", lvl, 6 - (int)strlen(lvl), "");
+    switch (level) {
+    case LOG_LEVEL_ERROR:
+        fprintf(stream, "[piadina] ERROR: ");
+        break;
+    case LOG_LEVEL_WARN:
+        fprintf(stream, "[piadina] WARNING: ");
+        break;
+    case LOG_LEVEL_INFO:
+        fprintf(stream, "[piadina] ");
+        break;
+    case LOG_LEVEL_DEBUG:
+    default:
+        fprintf(stream, "[piadina] ");
+        break;
+    }
 
     va_list args;
     va_start(args, fmt);
