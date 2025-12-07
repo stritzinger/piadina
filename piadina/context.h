@@ -18,7 +18,11 @@
 typedef struct {
     char *cache_root;      /* owned */
     char *payload_root;    /* owned */
-    char *entry_path;      /* owned */
+    char *temp_dir;        /* owned */
+    char *entry_path;      /* owned absolute path to ENTRY_POINT under payload_root */
+    char *entry_point;     /* owned relative ENTRY_POINT from metadata */
+    char *app_name;        /* owned, metadata APP_NAME */
+    char *app_ver;         /* owned, metadata APP_VER */
 
     char **entry_args;         /* owned array of owned strings */
     size_t entry_args_count;

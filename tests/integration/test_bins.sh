@@ -42,24 +42,16 @@ else
 fi
 
 echo ""
-echo "=== Testing piadina test process launch (without footer) ==="
-# The plain binary should fail footer validation but still launch test process
-OUTPUT=$("$PIADINA_BIN" 2>&1) || true
-if echo "$OUTPUT" | grep -q "test process launched successfully"; then
-    echo "PASS: Test process launched"
+echo "=== Testing piadina behavior without footer (plain binary) ==="
+set +e
+OUTPUT=$("$PIADINA_BIN" 2>&1)
+EXIT_CODE=$?
+set -e
+if [ "$EXIT_CODE" -eq 112 ] && echo "$OUTPUT" | grep -qi "no valid footer"; then
+    echo "PASS: Missing footer yields exit code 112 and error message"
 else
-    echo "FAIL: Test process did not launch" >&2
+    echo "FAIL: Expected footer error (112) and message, got $EXIT_CODE" >&2
     echo "Output: $OUTPUT" >&2
-    exit 1
-fi
-
-echo ""
-echo "=== Testing exit code forwarding ==="
-# Test that the launcher returns 0 when test process succeeds
-if "$PIADINA_BIN" 2>/dev/null; then
-    echo "PASS: Exit code 0 forwarded correctly"
-else
-    echo "FAIL: Expected exit code 0" >&2
     exit 1
 fi
 

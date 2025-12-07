@@ -32,9 +32,14 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mkdir -p "$PAYLOAD_DIR/subdir"
+mkdir -p "$PAYLOAD_DIR/subdir" "$PAYLOAD_DIR/bin"
 echo "hello from integration payload" > "$PAYLOAD_DIR/hello.txt"
 echo "nested file content" > "$PAYLOAD_DIR/subdir/nested.txt"
+cat > "$PAYLOAD_DIR/bin/app" <<'EOF'
+#!/usr/bin/env sh
+echo "app running"
+EOF
+chmod +x "$PAYLOAD_DIR/bin/app"
 
 "$AZDORA_BIN" \
     --launcher "$PIADINA_BIN" \
@@ -51,7 +56,7 @@ if [[ "$RUN_STATUS" -ne 0 ]]; then
     exit 1
 fi
 
-EXTRACT_DIR="$(echo "$RUN_OUTPUT" | sed -n 's|.*extracting archive to \([^ ]*\).*|\1|p' | tail -n 1)"
+EXTRACT_DIR="$(echo "$RUN_OUTPUT" | sed -n 's|.*payload ready at \([^ ]*\).*|\1|p' | tail -n 1)"
 
 if [[ -z "$EXTRACT_DIR" || ! -d "$EXTRACT_DIR" ]]; then
     echo "ERROR: failed to detect extraction directory" >&2

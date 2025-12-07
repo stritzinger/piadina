@@ -29,7 +29,10 @@ cleanup() {
 trap cleanup EXIT
 
 mkdir -p "$PAYLOAD_DIR/bin"
-echo 'echo hello' > "$PAYLOAD_DIR/bin/app"
+cat > "$PAYLOAD_DIR/bin/app" <<'EOF'
+#!/usr/bin/env sh
+echo "hello"
+EOF
 chmod +x "$PAYLOAD_DIR/bin/app"
 
 # Build SFX with templated CACHE_ROOT and PAYLOAD_ROOT
@@ -76,7 +79,7 @@ run_case() {
     fi
 
     local extract_dir
-    extract_dir=$(echo "$output" | sed -n 's|.*extracting archive to \([^ ]*\).*|\1|p' | tail -n 1)
+    extract_dir=$(echo "$output" | sed -n 's|.*payload ready at \([^ ]*\).*|\1|p' | tail -n 1)
     if [[ -z "$extract_dir" ]]; then
         echo "ERROR ($name): could not parse extraction dir" >&2
         echo "$output" >&2

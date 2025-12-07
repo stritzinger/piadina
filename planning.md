@@ -648,57 +648,57 @@ Mark items as you complete them.
 
 ### Archive abstraction (`piadina/archive.{c,h}` and `piadina/extractor_tar_gzip.{c,h}`)
 
-- [ ] **Archive interface**
-  - [ ] Define a generic archive extraction interface:
-    - [ ] Function to check if a given `ARCHIVE_FORMAT` is supported.
-    - [ ] Function to extract from a file descriptor + offset/size into target directory.
+- [x] **Archive interface**
+  - [x] Define a generic archive extraction interface:
+    - [x] Function to check if a given `ARCHIVE_FORMAT` is supported.
+    - [x] Function to extract from a file descriptor + offset/size into target directory.
 
-- [ ] **tar+gzip backend**
-  - [ ] Implement `extractor_tar_gzip`:
-    - [ ] Accept file descriptor and offset/size for the archive.
-    - [ ] Use `lseek` to position at `archive_offset`.
-    - [ ] Decompress gzip stream with `zlib`.
-    - [ ] Feed decompressed stream into `tar_decoder`.
+- [x] **tar+gzip backend**
+  - [x] Implement `extractor_tar_gzip`:
+    - [x] Accept file descriptor and offset/size for the archive.
+    - [x] Use `lseek` to position at `archive_offset`.
+    - [x] Decompress gzip stream with `zlib`.
+    - [x] Feed decompressed stream into `tar_decoder`.
 
 ### Basic extraction logic (no locking/ready markers yet)
 
-- [ ] **Context integration**
-  - [ ] Use `piadina_context` to compute:
-    - [ ] `CACHE_ROOT`.
-    - [ ] `PAYLOAD_ROOT`.
-    - [ ] Temporary extraction directory (`TEMP_DIR`).
+- [x] **Context integration**
+  - [x] Use `piadina_context` to compute:
+    - [x] `CACHE_ROOT`.
+    - [x] `PAYLOAD_ROOT`.
+    - [x] Temporary extraction directory (`TEMP_DIR`).
 
-- [ ] **Extraction path**
-  - [ ] If `PAYLOAD_ROOT` exists:
-    - [ ] Optionally reuse it without validation (simplified for this milestone).
-  - [ ] If `PAYLOAD_ROOT` does not exist:
-    - [ ] Remove any existing `TEMP_DIR`.
-    - [ ] Create `TEMP_DIR`.
-    - [ ] Extract archive into `TEMP_DIR` via archive backend.
-    - [ ] Atomically rename `TEMP_DIR` to `PAYLOAD_ROOT`.
+- [x] **Extraction path**
+  - [x] If `PAYLOAD_ROOT` exists:
+    - [x] Optionally reuse it without validation (simplified for this milestone).
+  - [x] If `PAYLOAD_ROOT` does not exist:
+    - [x] Remove any existing `TEMP_DIR`.
+    - [x] Create `TEMP_DIR`.
+    - [x] Extract archive into `TEMP_DIR` via archive backend.
+    - [x] Atomically rename `TEMP_DIR` to `PAYLOAD_ROOT`.
 
 ### Providing a minimal runnable prototype
 
-- [ ] **Launcher behavior**
-  - [ ] Combine:
-    - [ ] Footer read/validate.
-    - [ ] Metadata decode.
-    - [ ] Context resolution.
-    - [ ] Archive extraction.
-    - [ ] Process launch with a real payload.
-  - [ ] Ensure:
-    - [ ] Single-process, sequential runs reuse existing `PAYLOAD_ROOT` where possible.
-    - [ ] No `.piadina_env` or validation/cleanup policies beyond a simple default.
+- [x] **Launcher behavior**
+  - [x] Combine:
+    - [x] Footer read/validate.
+    - [x] Metadata decode.
+    - [x] Context resolution.
+    - [x] Archive extraction.
+    - [x] Process launch with a real payload.
+  - [x] Ensure:
+    - [x] Single-process, sequential runs reuse existing `PAYLOAD_ROOT` where possible.
+    - [x] No `.piadina_env` or validation/cleanup policies beyond a simple default.
 
 ### Tests for milestone 9
 
-- [ ] **Integration tests**
-  - [ ] Use Azdora to pack a small payload (e.g. simple shell script or small program).
-  - [ ] Run Piadina:
-    - [ ] Confirm extraction into cache.
-    - [ ] Confirm payload launches successfully.
-  - [ ] Re-run Piadina:
-    - [ ] Confirm payload is re-used without re-extraction (as observed via logs or timestamps).
+- [x] **Integration tests**
+  - [x] Use Azdora to pack a small payload (e.g. simple shell script or small program).
+  - [x] Run Piadina:
+    - [x] Confirm extraction into cache.
+    - [x] Confirm payload launches successfully.
+  - [x] Re-run Piadina:
+    - [x] Confirm payload is re-used without re-extraction (as observed via logs or timestamps).
 
 ---
 

@@ -20,6 +20,7 @@
 
 # Generated headers
 /piadina_config.h
+/piadina_config.h.in
 
 # Makefile outputs
 Makefile.in

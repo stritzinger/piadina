@@ -27,6 +27,7 @@ struct template_lookup {
 
 static char *dup_string(const char *s);
 static char *join_path(const char *a, const char *b);
+static char *make_temp_dir(const char *cache_root, const char *archive_hex);
 static char *bytes_to_hex(const uint8_t *data, size_t len);
 static const char *lookup_var(const struct template_lookup *vars, size_t var_count,
                               const char *name, size_t len);
@@ -90,7 +91,11 @@ void piadina_context_destroy(piadina_context_t *ctx)
     }
     free(ctx->cache_root);
     free(ctx->payload_root);
+    free(ctx->temp_dir);
     free(ctx->entry_path);
+    free(ctx->entry_point);
+    free(ctx->app_name);
+    free(ctx->app_ver);
     if (ctx->entry_args) {
         for (size_t i = 0; i < ctx->entry_args_count; ++i) {
             free(ctx->entry_args[i]);
@@ -121,6 +126,10 @@ void piadina_context_print(const piadina_context_t *ctx, FILE *stream)
     FILE *out = stream ? stream : stderr;
     fprintf(out, "  cache_root:       %s\n", ctx->cache_root ? ctx->cache_root : "(null)");
     fprintf(out, "  payload_root:     %s\n", ctx->payload_root ? ctx->payload_root : "(null)");
+    fprintf(out, "  temp_dir:         %s\n", ctx->temp_dir ? ctx->temp_dir : "(null)");
+    fprintf(out, "  app_name:         %s\n", ctx->app_name ? ctx->app_name : "(null)");
+    fprintf(out, "  app_ver:          %s\n", ctx->app_ver ? ctx->app_ver : "(null)");
+    fprintf(out, "  entry_point:      %s\n", ctx->entry_point ? ctx->entry_point : "(null)");
     fprintf(out, "  entry_path:       %s\n", ctx->entry_path ? ctx->entry_path : "(null)");
 
     fprintf(out, "  entry_args (%zu):\n", ctx->entry_args_count);
@@ -223,6 +232,30 @@ piadina_context_result_t piadina_context_resolve(const piadina_metadata_t *metad
         vars[var_count++] = (struct template_lookup){.key = "PAYLOAD_ROOT", .value = payload_root};
     }
 
+    /* APP_NAME / APP_VER (expanded to allow templates) */
+    const char *app_name_raw = NULL;
+    rc = piadina_metadata_get_string(metadata, METADATA_FIELD_APP_NAME, &app_name_raw, error_msg);
+    if (rc == PIADINA_METADATA_OK && app_name_raw) {
+        char *app_name = NULL;
+        piadina_metadata_result_t rc2 = template_expand_string(app_name_raw, vars, var_count, &app_name, error_msg);
+        if (rc2 != PIADINA_METADATA_OK) {
+            piadina_context_destroy(ctx);
+            return md_to_ctx(rc2);
+        }
+        ctx->app_name = app_name;
+    }
+    const char *app_ver_raw = NULL;
+    rc = piadina_metadata_get_string(metadata, METADATA_FIELD_APP_VER, &app_ver_raw, error_msg);
+    if (rc == PIADINA_METADATA_OK && app_ver_raw) {
+        char *app_ver = NULL;
+        piadina_metadata_result_t rc2 = template_expand_string(app_ver_raw, vars, var_count, &app_ver, error_msg);
+        if (rc2 != PIADINA_METADATA_OK) {
+            piadina_context_destroy(ctx);
+            return md_to_ctx(rc2);
+        }
+        ctx->app_ver = app_ver;
+    }
+
     /* Resolve ENTRY_POINT */
     const char *entry_point_raw = NULL;
     rc = piadina_metadata_get_string(metadata, METADATA_FIELD_ENTRY_POINT, &entry_point_raw, error_msg);
@@ -233,7 +266,17 @@ piadina_context_result_t piadina_context_resolve(const piadina_metadata_t *metad
         free(payload_root);
         return md_to_ctx(rc);
     }
-    /* Do not expand templates in ENTRY_POINT for security/correctness */
+    /* Do not expand templates in ENTRY_POINT for security/correctness; must stay relative */
+    if (entry_point_raw && entry_point_raw[0] == '/') {
+        free(payload_hex);
+        free(archive_hex);
+        free(cache_root);
+        free(payload_root);
+        if (error_msg) {
+            *error_msg = "ENTRY_POINT must be relative to PAYLOAD_ROOT";
+        }
+        return PIADINA_CONTEXT_ERR_BAD_VALUE;
+    }
     char *entry_point = dup_string(entry_point_raw);
     if (!entry_point) {
         free(payload_hex);
@@ -248,15 +291,20 @@ piadina_context_result_t piadina_context_resolve(const piadina_metadata_t *metad
 
     ctx->cache_root = cache_root;
     ctx->payload_root = payload_root;
+    ctx->entry_point = entry_point;
     ctx->entry_path = join_path(payload_root, entry_point);
-    free(entry_point);
+    ctx->temp_dir = make_temp_dir(cache_root, archive_hex);
     free(payload_hex);
     free(archive_hex);
-    if (!ctx->cache_root || !ctx->payload_root || !ctx->entry_path) {
+    if (!ctx->cache_root || !ctx->payload_root || !ctx->entry_path || !ctx->temp_dir) {
+        piadina_context_destroy(ctx);
         if (error_msg) {
             *error_msg = "out of memory";
         }
         return PIADINA_CONTEXT_ERR_OUT_OF_MEMORY;
+    }
+    if (var_count < MAX_TEMPLATE_VARS) {
+        vars[var_count++] = (struct template_lookup){.key = "TEMP_DIR", .value = ctx->temp_dir};
     }
 
     /* ENTRY_ARGS */
@@ -388,6 +436,20 @@ static char *join_path(const char *a, const char *b)
     }
     memcpy(out + pos, b, lb);
     out[pos + lb] = '\0';
+    return out;
+}
+
+static char *make_temp_dir(const char *cache_root, const char *archive_hex)
+{
+    if (!cache_root || !archive_hex) {
+        return NULL;
+    }
+    size_t len = strlen(cache_root) + 2 /* "/." */ + strlen(archive_hex) + strlen(".tmp") + 1;
+    char *out = malloc(len);
+    if (!out) {
+        return NULL;
+    }
+    snprintf(out, len, "%s/.%s.tmp", cache_root, archive_hex);
     return out;
 }
 
