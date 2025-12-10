@@ -55,6 +55,12 @@ static int copy_env_map(const piadina_meta_map_t *map,
                         char ***keys_out,
                         char ***vals_out,
                         size_t *count_out);
+static bool patchelf_target_valid(const char *path);
+static piadina_metadata_result_t copy_patchelf_entries(const piadina_meta_array_t *arr,
+                                                       piadina_context_t *ctx,
+                                                       const struct template_lookup *vars,
+                                                       size_t var_count,
+                                                       const char **error_msg);
 
 /* Exported Functions */
 
@@ -115,6 +121,13 @@ void piadina_context_destroy(piadina_context_t *ctx)
         }
         free(ctx->env);
     }
+    if (ctx->patchelf_entries) {
+        for (size_t i = 0; i < ctx->patchelf_count; ++i) {
+            free(ctx->patchelf_entries[i].target);
+            free(ctx->patchelf_entries[i].interpreter);
+        }
+        free(ctx->patchelf_entries);
+    }
     memset(ctx, 0, sizeof(*ctx));
 }
 
@@ -147,6 +160,17 @@ void piadina_context_print(const piadina_context_t *ctx, FILE *stream)
         const char *k = (ctx->env && ctx->env[i].key) ? ctx->env[i].key : "(null)";
         const char *v = (ctx->env && ctx->env[i].value) ? ctx->env[i].value : "(null)";
         fprintf(out, "    %s=%s\n", k, v);
+    }
+
+    fprintf(out, "  patchelf_set_interpreter (%zu):\n", ctx->patchelf_count);
+    for (size_t i = 0; i < ctx->patchelf_count; ++i) {
+        const char *t = (ctx->patchelf_entries && ctx->patchelf_entries[i].target)
+                            ? ctx->patchelf_entries[i].target
+                            : "(null)";
+        const char *p = (ctx->patchelf_entries && ctx->patchelf_entries[i].interpreter)
+                            ? ctx->patchelf_entries[i].interpreter
+                            : "(null)";
+        fprintf(out, "    [%zu]: %s -> %s\n", i, t, p);
     }
 }
 
@@ -380,6 +404,20 @@ piadina_context_result_t piadina_context_resolve(const piadina_metadata_t *metad
         }
         free(keys);
         free(vals);
+    }
+
+    /* PATCHELF_SET_INTERPRETER */
+    const piadina_meta_array_t *patchelf_arr = NULL;
+    rc = piadina_metadata_get_array(metadata,
+                                    METADATA_FIELD_PATCHELF_SET_INTERPRETER,
+                                    &patchelf_arr,
+                                    error_msg);
+    if (rc == PIADINA_METADATA_OK && patchelf_arr) {
+        piadina_metadata_result_t prc =
+            copy_patchelf_entries(patchelf_arr, ctx, vars, var_count, error_msg);
+        if (prc != PIADINA_METADATA_OK) {
+            return md_to_ctx(prc);
+        }
     }
 
     return PIADINA_CONTEXT_OK;
@@ -693,4 +731,95 @@ fail:
     free(keys);
     free(vals);
     return -1;
+}
+
+static bool patchelf_target_valid(const char *path)
+{
+    if (!path || path[0] == '\0' || path[0] == '/') {
+        return false;
+    }
+    /* reject path traversal via .. segments */
+    if (strncmp(path, "..", 2) == 0) {
+        return false;
+    }
+    const char *p = path;
+    while (*p) {
+        if (p[0] == '/' && p[1] == '/' ) {
+            return false;
+        }
+        if (p[0] == '.' && p[1] == '.' && (p[2] == '/' || p[2] == '\0')) {
+            return false;
+        }
+        if (p[0] == '/' && p[1] == '.' && p[2] == '.' &&
+            (p[3] == '/' || p[3] == '\0')) {
+            return false;
+        }
+        ++p;
+    }
+    return true;
+}
+
+static piadina_metadata_result_t copy_patchelf_entries(const piadina_meta_array_t *arr,
+                                                       piadina_context_t *ctx,
+                                                       const struct template_lookup *vars,
+                                                       size_t var_count,
+                                                       const char **error_msg)
+{
+    if (!arr || !ctx) {
+        return PIADINA_METADATA_ERR_INVALID_ARGUMENT;
+    }
+    if (arr->count == 0) {
+        ctx->patchelf_entries = NULL;
+        ctx->patchelf_count = 0;
+        return PIADINA_METADATA_OK;
+    }
+
+    ctx->patchelf_entries = calloc(arr->count, sizeof(*ctx->patchelf_entries));
+    if (!ctx->patchelf_entries) {
+        return PIADINA_METADATA_ERR_OUT_OF_MEMORY;
+    }
+    ctx->patchelf_count = 0;
+
+    for (size_t i = 0; i < arr->count; ++i) {
+        if (arr->items[i].type != PIADINA_META_STRING || !arr->items[i].as.str) {
+            if (error_msg) {
+                *error_msg = "PATCHELF_SET_INTERPRETER entries must be strings";
+            }
+            return PIADINA_METADATA_ERR_BAD_VALUE;
+        }
+        const char *entry = arr->items[i].as.str;
+        const char *sep = strchr(entry, ':');
+        if (!sep || sep == entry || sep[1] == '\0') {
+            if (error_msg) {
+                *error_msg = "PATCHELF_SET_INTERPRETER entry must be <target>:<interpreter>";
+            }
+            return PIADINA_METADATA_ERR_BAD_VALUE;
+        }
+        size_t target_len = (size_t)(sep - entry);
+        char *target = strndup(entry, target_len);
+        if (!target) {
+            return PIADINA_METADATA_ERR_OUT_OF_MEMORY;
+        }
+        if (!patchelf_target_valid(target)) {
+            free(target);
+            if (error_msg) {
+                *error_msg = "PATCHELF_SET_INTERPRETER target must be relative and not contain '..'";
+            }
+            return PIADINA_METADATA_ERR_BAD_VALUE;
+        }
+
+        const char *interp_raw = sep + 1;
+        char *interp_resolved = NULL;
+        piadina_metadata_result_t rc =
+            template_expand_string(interp_raw, vars, var_count, &interp_resolved, error_msg);
+        if (rc != PIADINA_METADATA_OK) {
+            free(target);
+            return rc;
+        }
+        ctx->patchelf_entries[ctx->patchelf_count].target = target;
+        ctx->patchelf_entries[ctx->patchelf_count].interpreter = interp_resolved;
+        ctx->patchelf_count++;
+    }
+
+    return PIADINA_METADATA_OK;
 }

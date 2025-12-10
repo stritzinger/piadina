@@ -35,6 +35,12 @@ typedef struct {
         char *value; /* owned */
     } *env;
     size_t env_count;
+
+    struct {
+        char *target;      /* owned relative path inside payload */
+        char *interpreter; /* owned resolved interpreter path */
+    } *patchelf_entries;
+    size_t patchelf_count;
 } piadina_context_t;
 
 typedef enum {

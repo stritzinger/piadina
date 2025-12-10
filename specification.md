@@ -233,6 +233,11 @@ Execution configuration:
   - Specifies environment variables to add or override for the child process.
   - Keys MUST also be shell-safe for export: after uppercasing, they must match
     `[A-Za-z_][A-Za-z0-9_]*` (hyphens are not permitted).
+- **`"PATCHELF_SET_INTERPRETER"`** (array of text, optional):
+  - Each element is `<target>:<interpreter>`.
+  - `target`: relative path inside the payload archive (e.g. `lib/erlang/erts-16.1.2/bin/erlexec`), **no templating** applied; it is resolved under the extracted payload directory.
+  - `interpreter`: path to set as the ELF interpreter; supports templating (e.g. `{PAYLOAD_ROOT}/lib/ld-musl-x86_64.so.1`).
+  - Piadina patches binaries after extraction and before writing the ready marker; entries are idempotent (skip if already set) and fail if the file is not a dynamic ELF. If the new interpreter is longer than the existing `.interp`, Piadina will relocate/grow the `.interp` string; failure occurs only if the ELF layout cannot be safely rewritten or I/O errors occur.
 
 Extraction/cache configuration:
 
@@ -284,6 +289,7 @@ Templating evaluation order:
    - Apply template substitution to each element of `"ENTRY_ARGS"` and `"ENTRY_ARGS_POST"`.
    - This allows these fields to reference variables like `{PAYLOAD_ROOT}` or `{CACHE_ROOT}`.
    - Note: `"ENTRY_POINT"` does **not** support template substitution; it must be a valid relative path within the payload.
+   - `"PATCHELF_SET_INTERPRETER"` applies templating only to the `interpreter` portion; `target` is a literal relative path.
 5. **Resolve metadata environment variables**:
    - For each entry in metadata `"ENV"`, apply template substitution using all previously defined fields.
    - The resulting key/value pairs are then applied to the child’s environment.
@@ -461,6 +467,10 @@ Under the lock:
    - Create `TEMP_DIR`.
    - Open the launcher file and seek to `archive_offset`.
    - Stream (`read`) the archive bytes through gzip and tar extraction code into `TEMP_DIR`.
+    - If `"PATCHELF_SET_INTERPRETER"` is present:
+      - For each entry, resolve `{PAYLOAD_ROOT}` (and other templates) in the interpreter string; resolve `target` relative to `TEMP_DIR`.
+      - Verify the target is a dynamic ELF; skip if the current interpreter already matches the requested value.
+      - Replace the ELF interpreter; if the new interpreter is longer than the existing `.interp`, Piadina will relocate/grow the `.interp` region. Fail with a clear error only if the ELF layout cannot be safely rewritten or I/O errors occur.
    - On successful extraction (still under the lock):
      - Atomically `rename(TEMP_DIR, PAYLOAD_ROOT)`.
      - Write or refresh the exported metadata file inside `PAYLOAD_ROOT` (see §4.3.4).

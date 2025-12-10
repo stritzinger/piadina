@@ -34,6 +34,7 @@
 #include "metadata.h"
 #include "context.h"
 #include "loader.h"
+#include "patchref.h"
 
 /* Internal Prototypes */
 
@@ -45,6 +46,8 @@ static int remove_recursive(const char *path);
 static int launch_payload(const piadina_context_t *ctx, const piadina_config_t *config);
 static void log_launch_command(const piadina_context_t *ctx, char *const *argv, size_t argc);
 static void log_launch_debug(const piadina_context_t *ctx, char *const *argv, size_t argc);
+static int apply_patchelf_set_interpreter(const piadina_context_t *ctx);
+static int join_under(const char *root, const char *relative, char *out, size_t out_len);
 
 /* Exported Functions */
 
@@ -190,6 +193,11 @@ int main(int argc, char **argv)
             goto cleanup;
         }
 
+        if (apply_patchelf_set_interpreter(&ctx) != 0) {
+            result = PIADINA_EXIT_EXTRACTION_ERROR;
+            goto cleanup;
+        }
+
         if (ensure_parent_dir(ctx.payload_root) != 0) {
             log_error("failed to create parent directories for %s: %s",
                       ctx.payload_root, strerror(errno));
@@ -228,6 +236,25 @@ static bool path_is_dir(const char *path)
 {
     struct stat st;
     return path && stat(path, &st) == 0 && S_ISDIR(st.st_mode);
+}
+
+static int join_under(const char *root, const char *relative, char *out, size_t out_len)
+{
+    if (!root || !relative || !out) {
+        return -1;
+    }
+    size_t root_len = strlen(root);
+    size_t rel_len = strlen(relative);
+    size_t need = root_len + 1 + rel_len + 1;
+    if (need > out_len) {
+        errno = ENAMETOOLONG;
+        return -1;
+    }
+    memcpy(out, root, root_len);
+    out[root_len] = '/';
+    memcpy(out + root_len + 1, relative, rel_len);
+    out[need - 1] = '\0';
+    return 0;
 }
 
 static int mkdir_p_local(const char *path)
@@ -319,6 +346,40 @@ static int remove_recursive(const char *path)
     }
 
     return unlink(path);
+}
+
+static int apply_patchelf_set_interpreter(const piadina_context_t *ctx)
+{
+    if (!ctx || ctx->patchelf_count == 0) {
+        return 0;
+    }
+    char full_path[PLATFORM_PATH_MAX];
+    for (size_t i = 0; i < ctx->patchelf_count; ++i) {
+        if (join_under(ctx->temp_dir, ctx->patchelf_entries[i].target, full_path, sizeof(full_path)) != 0) {
+            log_error("patchelf: failed to build path for %s", ctx->patchelf_entries[i].target);
+            return -1;
+        }
+        log_debug("patchelf: setting interpreter for %s to %s (full path: %s)",
+                  ctx->patchelf_entries[i].target,
+                  ctx->patchelf_entries[i].interpreter,
+                  full_path);
+        patchref_result_t rc = patchref_set_interpreter(full_path, ctx->patchelf_entries[i].interpreter);
+        if (rc == PATCHREF_OK) {
+            log_info("patchelf: set interpreter of %s to %s",
+                     ctx->patchelf_entries[i].target,
+                     ctx->patchelf_entries[i].interpreter);
+        } else if (rc == PATCHREF_ALREADY_SET) {
+            log_debug("patchelf: %s already uses interpreter %s",
+                      ctx->patchelf_entries[i].target,
+                      ctx->patchelf_entries[i].interpreter);
+        } else {
+            log_error("patchelf: failed for %s: %s",
+                      ctx->patchelf_entries[i].target,
+                      patchref_result_to_string(rc));
+            return -1;
+        }
+    }
+    return 0;
 }
 
 static int launch_payload(const piadina_context_t *ctx, const piadina_config_t *config)

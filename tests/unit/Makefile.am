@@ -25,7 +25,8 @@ check_PROGRAMS = \
 	test_tar_gzip \
 	test_piadina_metadata \
 	test_piadina_context \
-	test_piadina_loader
+	test_piadina_loader \
+	test_patchref
 
 TESTS = $(check_PROGRAMS)
 
@@ -92,3 +93,6 @@ test_piadina_loader_LDADD = $(top_builddir)/piadina/piadina-loader.o \
 	$(top_builddir)/piadina/piadina-metadata.o \
 	$(top_builddir)/piadina/piadina-archive.o \
 	$(top_builddir)/piadina/piadina-extractor_tar_gzip.o $(LDADD)
+
+test_patchref_SOURCES = test_patchref.c ../unity/unity.c
+test_patchref_LDADD = $(top_builddir)/piadina/piadina-patchref.o $(LDADD)

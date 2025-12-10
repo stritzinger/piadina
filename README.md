@@ -19,6 +19,7 @@ Both executables are built through the same Autotools project.
   - [Build Troubleshooting](#build-troubleshooting)
   - [Cleaning Up](#cleaning-up)
 - [Quickstart: build a sample self-extracting binary](#quickstart-build-a-sample-self-extracting-binary)
+- [Interpreter patching with PATCHELF_SET_INTERPRETER](#interpreter-patching-with-patchelf_set_interpreter)
 
 <a name="build-instructions"></a>
 ## Build Instructions
@@ -378,3 +379,25 @@ Run it (pass any extra args; `--exit N` sets the exit code):
 ```sh
 "$OUTPUT" --launcher-log-level=info -- "hello" "arg with space" --exit 7
 ```
+
+<a name="interpreter-patching-with-patchelf_set_interpreter"></a>
+## Interpreter patching with `PATCHELF_SET_INTERPRETER`
+
+Piadina can patch ELF interpreters after extraction, before the payload is marked ready. This is useful when you embed your own dynamic loader (e.g., musl or a relocated glibc loader) and need every dynamic binary in the payload to use it.
+
+How to use:
+
+- Add metadata entries: `PATCHELF_SET_INTERPRETER[]=<target>:<interpreter>`.
+  - `target`: relative path inside the payload archive (no templating).
+  - `interpreter`: path to set; supports templates (e.g., `{PAYLOAD_ROOT}/lib/ld-musl-x86_64.so.1`).
+- With Azdora CLI: `--meta PATCHELF_SET_INTERPRETER[]=bin/app:{PAYLOAD_ROOT}/lib/ld-musl-x86_64.so.1`
+- Multiple entries are allowed; each target is patched independently and idempotently (skipped if already set).
+
+Behavior and constraints:
+
+- Runs during extraction in `TEMP_DIR` before rename to `PAYLOAD_ROOT`.
+- Works on ET_EXEC/ET_DYN ELF only; fails clearly on non-ELF or static binaries.
+- If the new interpreter is longer than the existing `.interp`, Piadina relocates/grows the interpreter string; it fails only when the ELF layout cannot be safely rewritten or on I/O errors.
+- Supports 32-bit and 64-bit ELF on Linux.
+
+To inspect results in tests, use `readelf -l` to check “Requesting program interpreter” and run the patched binaries.

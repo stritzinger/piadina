@@ -702,6 +702,43 @@ Mark items as you complete them.
 
 ---
 
+## Milestone 9.5 – Patchelf-Style Interpreter Rewrite (Metadata-Driven)
+
+### Azdora metadata support
+
+- [ ] **Schema extension**
+  - [ ] Add `PATCHELF_SET_INTERPRETER` as a top-level array-of-strings field in `metadata_core` (`METADATA_EXPECT_ARRAY_STRING`).
+  - [ ] Clarify parsing rules in CLI help: `-m PATCHELF_SET_INTERPRETER[]=<target>:<interpreter>`.
+  - [ ] Enforce `target` is a non-empty relative path (no templating); `interpreter` may contain templates (e.g. `{PAYLOAD_ROOT}/lib/ld-musl-x86_64.so.1`).
+  - [ ] Reject entries without a colon separator or with empty sides.
+- [ ] **Encoding**
+  - [ ] Ensure `azdora/metadata` stores the array in-order.
+  - [ ] Ensure `cbor_encode` emits the array as text elements.
+- [ ] **Tests**
+  - [ ] Unit tests for CLI parsing and validation of malformed entries.
+  - [ ] Unit tests for CBOR encoding of the array.
+
+### Piadina interpreter patcher
+
+- [x] **Minimal patcher implementation**
+  - [x] Add a small module (e.g. `piadina/patchelf_setinterp.{c,h}`) that:
+    - [x] Opens target file, verifies ELF magic and ET_EXEC/ET_DYN, locates `.interp`.
+    - [x] Reads current interpreter; if it matches desired, skip.
+    - [x] Replace interpreter **only if new length ≤ existing `.interp` size**; otherwise emit a clear error (v0.1 constraint).
+    - [x] Reject non-ELF or static binaries with a clear error.
+  - [x] Support both 32-bit and 64-bit ELF on Linux.
+- [x] **Integration into extraction**
+  - [x] During extraction to `TEMP_DIR`, after archive unpack completes and before rename, iterate `PATCHELF_SET_INTERPRETER` entries:
+    - [x] Resolve templates in the interpreter string using resolved `{PAYLOAD_ROOT}`.
+    - [x] Resolve `target` relative to `TEMP_DIR`.
+    - [x] Apply patcher; treat failure as fatal for the launch.
+  - [x] Keep operation idempotent so re-runs after partial extraction are safe.
+- [x] **Tests**
+  - [x] Unit test patcher on sample ELF with interpreter shorter/same-length replacement and growth when longer.
+  - [x] Integration test: build a small payload with dynamic ELFs, set metadata `PATCHELF_SET_INTERPRETER[]`, pack with Azdora, run Piadina, then verify with `readelf -l` and execution that interpreters match the provided paths.
+
+---
+
 ## Milestone 10 – Lock Management and Ready Markers
 
 ### Locking (`piadina/lock.{c,h}`)
